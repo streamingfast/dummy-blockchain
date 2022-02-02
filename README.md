@@ -34,13 +34,13 @@ make build
 
 ## Usage
 
-Run `./chain --help` to see list of all available flags:
+Run `./dummy-chain --help` to see list of all available flags:
 
 ```
 CLI for the Dummy Chain
 
 Usage:
-  chain [command]
+  dummy-chain [command]
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
@@ -62,7 +62,7 @@ Use "chain [command] --help" for more information about a command.
 To start the chain, run:
 
 ```shell
-./chain start
+./dummy-chain start
 ```
 
 You'll start seeing output like:
@@ -83,7 +83,7 @@ INFO[2022-01-13T11:55:13-06:00] processing block                              ha
 To enable DeepMind instrumentation:
 
 ```
-DM_ENABLED=1 ./chain
+DM_ENABLED=1 ./dummy-chain
 ```
 
 Output will look like:
@@ -106,3 +106,11 @@ Customize DM log output with environment variable:
 - `DM_OUTPUT=stdout` - Log to STDOUT (default)
 - `DM_OUTPUT=stderr` - Log to STDERR
 - `DM_OUTPUT=/path/to/file.log` - Log to regular file
+
+## Contributors
+
+- [Figment](https://github.com/figment-networks): Initial Implementation
+
+## License
+
+TBD
