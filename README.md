@@ -10,7 +10,7 @@ process.
 Clone the repository:
 
 ```bash
-git https://github.com/streamingfast/dummy-blockchain.git
+git clone https://github.com/streamingfast/dummy-blockchain.git
 cd dummy-blockchain
 ```
 
