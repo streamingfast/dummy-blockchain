@@ -52,11 +52,12 @@ Available Commands:
 Flags:
       --block-rate int        Block production rate (per second) (default 1)
       --genesis-height uint   Blockchain genesis height (default 1)
-  -h, --help                  help for chain
+  -h, --help                  help for dummy-blockchain
       --log-level string      Logging level (default "info")
       --store-dir string      Directory for storing blockchain state (default "./data")
+  -v, --version               version for dummy-blockchain
 
-Use "chain [command] --help" for more information about a command.
+Use "dummy-blockchain [command] --help" for more information about a command.
 ```
 
 To start the chain, run:
@@ -106,6 +107,20 @@ Customize DM log output with environment variable:
 - `DM_OUTPUT=stdout` - Log to STDOUT (default)
 - `DM_OUTPUT=stderr` - Log to STDERR
 - `DM_OUTPUT=/path/to/file.log` - Log to regular file
+
+## Running in Docker
+
+Build the docker image:
+
+```bash
+make docker-build
+```
+
+Start the dummy blockchain process:
+
+```bash
+docker run -it streamingfast/dummy-blockchain start
+```
 
 ## Contributors
 
