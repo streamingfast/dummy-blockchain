@@ -34,13 +34,13 @@ make build
 
 ## Usage
 
-Run `./dummy-chain --help` to see list of all available flags:
+Run `./dummy-blockchain --help` to see list of all available flags:
 
 ```
 CLI for the Dummy Chain
 
 Usage:
-  dummy-chain [command]
+  dummy-blockchain [command]
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
@@ -62,7 +62,7 @@ Use "chain [command] --help" for more information about a command.
 To start the chain, run:
 
 ```shell
-./dummy-chain start
+./dummy-blockchain start
 ```
 
 You'll start seeing output like:
@@ -83,7 +83,7 @@ INFO[2022-01-13T11:55:13-06:00] processing block                              ha
 To enable DeepMind instrumentation:
 
 ```
-DM_ENABLED=1 ./dummy-chain
+DM_ENABLED=1 ./dummy-blockchain
 ```
 
 Output will look like:

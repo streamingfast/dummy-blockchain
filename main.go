@@ -23,7 +23,7 @@ var cliOpts = struct {
 
 func main() {
 	root := cobra.Command{
-		Use:   "dummy-chain",
+		Use:   "dummy-blockchain",
 		Short: "CLI for the Dummy Chain",
 	}
 
