@@ -22,27 +22,19 @@ var cliOpts = struct {
 }{}
 
 func main() {
-	root := cobra.Command{
-		Use:   "dummy-blockchain",
-		Short: "CLI for the Dummy Chain",
+	root := &cobra.Command{
+		Use:     "dummy-blockchain",
+		Short:   "CLI for the Dummy Chain",
+		Version: VersionString(),
 	}
 
-	root.PersistentFlags().Uint64Var(&cliOpts.GenesisHeight, "genesis-height", 1, "Blockchain genesis height")
-	root.PersistentFlags().StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
-	root.PersistentFlags().StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
-	root.PersistentFlags().IntVar(&cliOpts.BlockRate, "block-rate", 1, "Block production rate (per second)")
-
-	if err := root.ParseFlags(os.Args); err != nil {
+	if err := initFlags(root); err != nil {
 		logrus.Fatal(err)
 	}
 
-	level, err := logrus.ParseLevel(cliOpts.LogLevel)
-	if err != nil {
+	if err := initLogger(); err != nil {
 		logrus.Fatal(err)
 	}
-
-	logrus.SetLevel(level)
-	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 
 	root.AddCommand(
 		makeInitCommand(),
@@ -53,10 +45,34 @@ func main() {
 	root.Execute()
 }
 
+func initFlags(root *cobra.Command) error {
+	flags := root.PersistentFlags()
+
+	flags.Uint64Var(&cliOpts.GenesisHeight, "genesis-height", 1, "Blockchain genesis height")
+	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
+	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
+	flags.IntVar(&cliOpts.BlockRate, "block-rate", 1, "Block production rate (per second)")
+
+	return nil
+}
+
+func initLogger() error {
+	level, err := logrus.ParseLevel(cliOpts.LogLevel)
+	if err != nil {
+		return err
+	}
+
+	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
+
+	return nil
+}
+
 func makeInitCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "init",
-		Short: "Initialize local blockchain state",
+		Use:          "init",
+		Short:        "Initialize local blockchain state",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logrus.WithField("dir", cliOpts.StoreDir).Info("initializing chain store")
 
@@ -68,8 +84,9 @@ func makeInitCommand() *cobra.Command {
 
 func makeResetCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "reset",
-		Short: "Reset local blockchain state",
+		Use:          "reset",
+		Short:        "Reset local blockchain state",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logrus.WithField("dir", cliOpts.StoreDir).Info("removing chain store")
 
@@ -85,8 +102,9 @@ func makeResetCommand() *cobra.Command {
 
 func makeStartComand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "start",
-		Short: "Start blockchian service",
+		Use:          "start",
+		Short:        "Start blockchian service",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if cliOpts.BlockRate < 1 {
 				return errors.New("block rate option must be greater than 1")
