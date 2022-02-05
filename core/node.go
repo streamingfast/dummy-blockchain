@@ -5,8 +5,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/streamingfast/dummy-chain/deepmind"
-	"github.com/streamingfast/dummy-chain/types"
+	"github.com/streamingfast/dummy-blockchain/deepmind"
+	"github.com/streamingfast/dummy-blockchain/types"
 )
 
 type Node struct {

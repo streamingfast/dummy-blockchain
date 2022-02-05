@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/streamingfast/dummy-chain/types"
+
+	"github.com/streamingfast/dummy-blockchain/types"
 )
 
 type Engine struct {

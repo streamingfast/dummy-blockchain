@@ -8,8 +8,8 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pbcodec "github.com/streamingfast/dummy-chain/proto"
-	"github.com/streamingfast/dummy-chain/types"
+	pbcodec "github.com/streamingfast/dummy-blockchain/proto"
+	"github.com/streamingfast/dummy-blockchain/types"
 )
 
 var (

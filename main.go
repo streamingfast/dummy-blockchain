@@ -10,8 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/streamingfast/dummy-chain/core"
-	"github.com/streamingfast/dummy-chain/deepmind"
+	"github.com/streamingfast/dummy-blockchain/core"
+	"github.com/streamingfast/dummy-blockchain/deepmind"
 )
 
 var cliOpts = struct {
