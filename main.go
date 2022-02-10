@@ -15,10 +15,11 @@ import (
 )
 
 var cliOpts = struct {
-	GenesisHeight uint64 `long:"genesis-height" description:"Blockhain genesis height" default:"1"`
-	LogLevel      string `long:"log-level" description:"Logging level" default:"info"`
-	StoreDir      string `long:"store-dir" description:"Directory for storing blocks data" default:"./data"`
-	BlockRate     int    `long:"block-rate" description:"Block production rate (per second)" default:"1"`
+	GenesisHeight uint64
+	LogLevel      string
+	StoreDir      string
+	BlockRate     int
+	ServerAddr    string
 }{}
 
 func main() {
@@ -52,6 +53,7 @@ func initFlags(root *cobra.Command) error {
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 1, "Block production rate (per second)")
+	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 
 	return nil
 }
@@ -120,6 +122,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.StoreDir,
 				cliOpts.BlockRate,
 				cliOpts.GenesisHeight,
+				cliOpts.ServerAddr,
 			)
 
 			if err := node.Initialize(); err != nil {

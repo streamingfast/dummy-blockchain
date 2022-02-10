@@ -11,13 +11,17 @@ import (
 
 type Node struct {
 	engine Engine
-	store  Store
+	server Server
+	store  *Store
 }
 
-func NewNode(storeDir string, blockRate int, genesisHeight uint64) *Node {
+func NewNode(storeDir string, blockRate int, genesisHeight uint64, serverAddr string) *Node {
+	store := NewStore(storeDir)
+
 	return &Node{
 		engine: NewEngine(genesisHeight, blockRate),
-		store:  NewStore(storeDir),
+		store:  store,
+		server: NewServer(store, serverAddr),
 	}
 }
 
@@ -52,6 +56,7 @@ func (node *Node) Initialize() error {
 }
 
 func (node *Node) Start(ctx context.Context) error {
+	go node.server.Start() // TODO: handle error here
 	go node.engine.StartBlockProduction(ctx)
 
 	for {

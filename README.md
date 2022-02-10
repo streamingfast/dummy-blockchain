@@ -54,6 +54,7 @@ Flags:
       --genesis-height uint   Blockchain genesis height (default 1)
   -h, --help                  help for dummy-blockchain
       --log-level string      Logging level (default "info")
+      --server-addr string    Server address (default "0.0.0.0:8080")
       --store-dir string      Directory for storing blockchain state (default "./data")
   -v, --version               version for dummy-blockchain
 

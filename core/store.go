@@ -23,8 +23,8 @@ type Store struct {
 	}
 }
 
-func NewStore(rootDir string) Store {
-	return Store{
+func NewStore(rootDir string) *Store {
+	return &Store{
 		rootDir:   rootDir,
 		blocksDir: filepath.Join(rootDir, "blocks"),
 		metaPath:  filepath.Join(rootDir, "meta.json"),
@@ -69,6 +69,10 @@ func (store *Store) WriteBlock(block *types.Block) error {
 	}
 
 	return ioutil.WriteFile(store.metaPath, meta, 0655)
+}
+
+func (store *Store) CurrentBlock() (*types.Block, error) {
+	return store.ReadBlock(store.meta.TipHeight)
 }
 
 func (store *Store) ReadBlock(height uint64) (*types.Block, error) {
