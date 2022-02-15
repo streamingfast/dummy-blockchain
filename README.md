@@ -136,10 +136,10 @@ API server starts on `0.0.0.0:8080` by default.
 
 List of available endpoints:
 
-- `/`              - Readme page
-- `/status         - Get chain status
-- `/block          - Get block for latest height
-- `/blocks/:height - Get block for a specific height
+- `/`               - Readme page
+- `/status`         - Get chain status
+- `/block`          - Get block for latest height
+- `/blocks/:height` - Get block for a specific height
 
 ## Contributors
 
