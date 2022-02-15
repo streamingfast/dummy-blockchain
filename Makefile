@@ -30,3 +30,8 @@ proto:
 .PHONY: docker-build
 docker-build:
 	docker build -t streamingfast/dummy-blockchain .
+
+# Start dummy chain in a docker container
+.PHONY: docker-start
+docker-start:
+	docker run -p 8080:8080 -it streamingfast/dummy-blockchain start

@@ -120,7 +120,7 @@ make docker-build
 Start the dummy blockchain process:
 
 ```bash
-docker run -it streamingfast/dummy-blockchain start
+make docker-start
 ```
 
 ## Contributors
