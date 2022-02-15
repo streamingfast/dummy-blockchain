@@ -5,6 +5,11 @@ Firehose integration. Instrumenter, "DeepMind" is a part responsible for data
 extraction and could be turned on with an environment variable when running the chain
 process.
 
+## Requirements
+
+- Go
+- Protobuf Tools
+
 ## Building
 
 Clone the repository:
@@ -85,7 +90,7 @@ INFO[2022-01-13T11:55:13-06:00] processing block                              ha
 To enable DeepMind instrumentation:
 
 ```
-DM_ENABLED=1 ./dummy-blockchain
+DM_ENABLED=1 ./dummy-blockchain start
 ```
 
 Output will look like:
