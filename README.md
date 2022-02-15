@@ -128,6 +128,19 @@ Start the dummy blockchain process:
 make docker-start
 ```
 
+## HTTP API
+
+Dummy chain comes equipped with a simple HTTP API to check on status and blocks.
+
+API server starts on `0.0.0.0:8080` by default.
+
+List of available endpoints:
+
+- `/`              - Readme page
+- `/status         - Get chain status
+- `/block          - Get block for latest height
+- `/blocks/:height - Get block for a specific height
+
 ## Contributors
 
 - [Figment](https://github.com/figment-networks): Initial Implementation
