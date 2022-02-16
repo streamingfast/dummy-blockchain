@@ -8,7 +8,7 @@ LDFLAGS = -s -w -X main.BuildCommit=$(BUILD_COMMIT) -X main.BuildTime=$(BUILD_TI
 # Build the binary
 .PHONY: build
 build:
-	@go build -ldflags "$(LDFLAGS)" -o $(BUILD_PATH)
+	go build -ldflags "$(LDFLAGS)" -o $(BUILD_PATH)
 	@echo "You can now execute './dummy-blockchain start' command"
 
 # Build binaries for all platforms
@@ -34,4 +34,4 @@ docker-build:
 # Start dummy chain in a docker container
 .PHONY: docker-start
 docker-start:
-	docker run -p 8080:8080 -it streamingfast/dummy-blockchain start
+	docker run -p 9090:9090 -it streamingfast/dummy-blockchain start

@@ -25,7 +25,7 @@ Install dependencies:
 go mod download
 ```
 
-Generate protobuf files:
+Generate protobuf files (optional):
 
 ```bash
 make proto
