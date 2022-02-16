@@ -34,4 +34,4 @@ docker-build:
 # Start dummy chain in a docker container
 .PHONY: docker-start
 docker-start:
-	docker run -p 9090:9090 -it streamingfast/dummy-blockchain start
+	docker run -p 8080:8080 -it streamingfast/dummy-blockchain start
