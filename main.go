@@ -15,11 +15,12 @@ import (
 )
 
 var cliOpts = struct {
-	GenesisHeight uint64
-	LogLevel      string
-	StoreDir      string
-	BlockRate     int
-	ServerAddr    string
+	GenesisHeight   uint64
+	LogLevel        string
+	StoreDir        string
+	BlockRate       int
+	ServerAddr      string
+	Instrumentation bool
 }{}
 
 func main() {
@@ -56,6 +57,7 @@ func initFlags(root *cobra.Command) error {
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 1, "Block production rate (per second)")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
+	flags.BoolVar(&cliOpts.Instrumentation, "dm-enabled", false, "Enable instrumentation")
 
 	return nil
 }
@@ -114,8 +116,7 @@ func makeStartComand() *cobra.Command {
 				return errors.New("block rate option must be greater than 1")
 			}
 
-			// TODO: expose this as a flag too
-			if os.Getenv("DM_ENABLED") == "1" {
+			if cliOpts.Instrumentation || os.Getenv("DM_ENABLED") == "1" {
 				initDeepMind()
 				defer deepmind.Shutdown()
 			}
