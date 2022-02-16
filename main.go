@@ -29,6 +29,8 @@ func main() {
 		Version: VersionString(),
 	}
 
+	root.SetOutput(os.Stderr)
+
 	if err := initFlags(root); err != nil {
 		logrus.Fatal(err)
 	}
