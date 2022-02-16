@@ -12,10 +12,15 @@ import (
 	"github.com/streamingfast/dummy-blockchain/types"
 )
 
+const (
+	filesPerDir = 1000
+)
+
 type Store struct {
-	rootDir   string
-	blocksDir string
-	metaPath  string
+	rootDir      string
+	blocksDir    string
+	metaPath     string
+	currentGroup int
 
 	meta struct {
 		StartHeight uint64 `json:"start_height"`
@@ -25,9 +30,10 @@ type Store struct {
 
 func NewStore(rootDir string) *Store {
 	return &Store{
-		rootDir:   rootDir,
-		blocksDir: filepath.Join(rootDir, "blocks"),
-		metaPath:  filepath.Join(rootDir, "meta.json"),
+		rootDir:      rootDir,
+		blocksDir:    filepath.Join(rootDir, "blocks"),
+		metaPath:     filepath.Join(rootDir, "meta.json"),
+		currentGroup: -1,
 	}
 }
 
@@ -64,6 +70,15 @@ func (store *Store) WriteBlock(block *types.Block) error {
 		return err
 	}
 
+	group := int(store.blockGroup(block.Height))
+	if group != store.currentGroup {
+		groupDir := fmt.Sprintf("%s/%010d", store.blocksDir, group)
+		if err := os.MkdirAll(groupDir, 0700); err != nil {
+			return err
+		}
+		store.currentGroup = group
+	}
+
 	if err := ioutil.WriteFile(store.blockFilename(block.Height), raw, 0655); err != nil {
 		return err
 	}
@@ -87,7 +102,11 @@ func (store *Store) ReadBlock(height uint64) (*types.Block, error) {
 }
 
 func (store *Store) blockFilename(height uint64) string {
-	return fmt.Sprintf("%s/%d.json", store.blocksDir, height)
+	return fmt.Sprintf("%s/%010d/%d.json", store.blocksDir, store.blockGroup(height), height)
+}
+
+func (store *Store) blockGroup(height uint64) uint64 {
+	return height - (height % filesPerDir)
 }
 
 func (store *Store) readMeta() error {
