@@ -5,11 +5,15 @@ on:
     tags:
       - "v*"
 
+env:
+  GO_VERSION: 1.17
+  CGO_ENABLED: 0
+
 jobs:
   main:
     name: Publish Release
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     
     steps:
       - name: Checkout
@@ -18,7 +22,7 @@ jobs:
       - name: Setup
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Download dependencies
         run: go mod download
