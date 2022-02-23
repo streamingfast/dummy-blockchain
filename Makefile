@@ -1,7 +1,7 @@
 PKG = github.com/streamingfast/dummy-blockchain
 BUILD_COMMIT = $(shell git rev-parse HEAD)
 BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" | tr -d '\n')
-BUILD_PATH ?= dummy-blockchain
+BUILD_PATH ?= dchain
 DIST_PATH ?= dist/$(BUILD_PATH)
 LDFLAGS = -s -w -X main.BuildCommit=$(BUILD_COMMIT) -X main.BuildTime=$(BUILD_TIME)
 
@@ -9,7 +9,7 @@ LDFLAGS = -s -w -X main.BuildCommit=$(BUILD_COMMIT) -X main.BuildTime=$(BUILD_TI
 .PHONY: build
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BUILD_PATH)
-	@echo "You can now execute './dummy-blockchain start' command"
+	@echo "You can now execute './${BUILD_PATH} start' command"
 
 # Build binaries for all platforms
 .PHONY: release

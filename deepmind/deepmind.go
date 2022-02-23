@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	pbcodec "github.com/streamingfast/dummy-blockchain/proto"
+	pbcodec "github.com/streamingfast/dummy-blockchain/pb/sf/acme/codec/v1"
 	"github.com/streamingfast/dummy-blockchain/types"
 )
 
@@ -84,7 +84,7 @@ func Block(block *types.Block) {
 		log.Fatal(err)
 	}
 
-	fmt.Fprintf(writer, "DMLOG BLOCK %s\n", base64.StdEncoding.EncodeToString(data))
+	fmt.Fprintf(writer, "DMLOG BLOCK_DATA %s\n", base64.StdEncoding.EncodeToString(data))
 }
 
 // EndBlock marks the end of the block data for a single height

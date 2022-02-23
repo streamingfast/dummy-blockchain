@@ -1,4 +1,6 @@
 .DS_Store
 dummy-*
+dchain
 data
 dist
+.idea
