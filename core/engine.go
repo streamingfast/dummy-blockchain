@@ -72,7 +72,7 @@ func (e *Engine) createBlock() types.Block {
 
 		block.Height = e.genesisHeight
 		block.Hash = makeHash(e.genesisHeight)
-		block.PrevHash = makeHash(e.genesisHeight)
+		block.PrevHash = makeHash(e.genesisHeight - 1)
 	}
 
 	for i := uint64(0); i < block.Height%10; i++ {
