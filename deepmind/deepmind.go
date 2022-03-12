@@ -1,15 +1,11 @@
 package deepmind
 
 import (
-	"encoding/base64"
+	"encoding/hex"
 	"fmt"
-	"io"
-	"log"
-
-	"google.golang.org/protobuf/proto"
-
-	pbcodec "github.com/streamingfast/dummy-blockchain/pb/sf/acme/codec/v1"
 	"github.com/streamingfast/dummy-blockchain/types"
+	"io"
+	"math/big"
 )
 
 var (
@@ -32,62 +28,57 @@ func Shutdown() {
 
 // BeginBlock marks the beginning of the block data for a single height
 func BeginBlock(number uint64) {
+	// DMLOG BLOCK_BEGIN <BLOCK_HEIGHT>
 	fmt.Fprintf(writer, "DMLOG BLOCK_BEGIN %d\n", number)
 }
 
-// Block writes all block data
-func Block(block *types.Block) {
-	newBlock := &pbcodec.Block{
-		Height:       block.Height,
-		Hash:         block.Hash,
-		PrevHash:     block.PrevHash,
-		Transactions: make([]*pbcodec.Transaction, len(block.Transactions)),
-		Timestamp:    uint64(block.Timestamp.UnixNano()),
+// BeginTrx marks the beginning of a transaction
+func BeginTrx(trx *types.Transaction) {
+	// DMLOG BEGIN_TRX <HASH> <TYPE> <SENDER> <RECEIVER> <AMOUNT> <FEE> <SUCCESS>
+	trxAmount := "0"
+	if trx.Amount.Cmp(new(big.Int).SetUint64(0)) > 0 {
+		trxAmount = hex.EncodeToString(trx.Amount.Bytes())
 	}
 
-	for idx, tx := range block.Transactions {
-		events := make([]*pbcodec.Event, len(tx.Events))
+	fmt.Fprintf(writer, "DMLOG BEGIN_TRX %s %s %s %s %s %s %t\n",
+		trx.Hash,
+		trx.Type,
+		trx.Sender,
+		trx.Receiver,
+		trxAmount,
+		hex.EncodeToString(trx.Fee.Bytes()),
+		trx.Success,
+	)
+}
 
-		for idxEv, ev := range tx.Events {
-			events[idxEv] = &pbcodec.Event{
-				Type: ev.Type,
-			}
+// TrxBeginEvent records the beginning of an event
+func TrxBeginEvent(trxHash string, event *types.Event) {
+	// DMLOG TRX_BEGIN_EVENT <TRX_HASH> <EVENT_TYPE>
+	fmt.Fprintf(writer, "DMLOG TRX_BEGIN_EVENT %s %s\n",
+		trxHash,
+		event.Type,
+	)
+}
 
-			for _, attr := range ev.Attributes {
-				events[idxEv].Attributes = append(events[idxEv].Attributes, &pbcodec.Attribute{
-					Key:   attr.Key,
-					Value: attr.Value,
-				})
-			}
-		}
-
-		newBlock.Transactions[idx] = &pbcodec.Transaction{
-			Type:     tx.Type,
-			Hash:     tx.Hash,
-			Sender:   tx.Sender,
-			Receiver: tx.Receiver,
-			Amount: &pbcodec.BigInt{
-				Bytes: tx.Amount.Bytes(),
-			},
-			Fee: &pbcodec.BigInt{
-				Bytes: tx.Fee.Bytes(),
-			},
-			Success: tx.Success,
-			Events:  events,
-		}
-	}
-
-	data, err := proto.Marshal(newBlock)
-	if err != nil {
-		// Terminating the app here will cause the chain to halt so it does not
-		// advance to a new block.
-		log.Fatal(err)
-	}
-
-	fmt.Fprintf(writer, "DMLOG BLOCK_DATA %s\n", base64.StdEncoding.EncodeToString(data))
+// TrxEventAttr record an attribute for a given event
+func TrxEventAttr(trxHash string, eventIndex uint64, key string, value string) {
+	// DMLOG TRX_BEGIN_EVENT <TRX_HASH> <EVENT_INDEX> <KEY> <VALUE>
+	fmt.Fprintf(writer, "DMLOG TRX_EVENT_ATTR %s %d %s %s\n",
+		trxHash,
+		eventIndex,
+		key,
+		value,
+	)
 }
 
 // EndBlock marks the end of the block data for a single height
-func EndBlock(number uint64) {
-	fmt.Fprintf(writer, "DMLOG BLOCK_END %d\n", number)
+func EndBlock(blk *types.Block) {
+	// DMLOG BLOCK_END <NUMBER> <HASH> <PREV_HASH> <TIMESTAMP> <TRX_COUNT>
+	fmt.Fprintf(writer, "DMLOG BLOCK_END %d %s %s %d %d\n",
+		blk.Height,
+		blk.Hash,
+		blk.PrevHash,
+		blk.Timestamp.UnixNano(),
+		len(blk.Transactions),
+	)
 }

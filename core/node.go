@@ -72,8 +72,16 @@ func (node *Node) Start(ctx context.Context) error {
 
 			if deepmind.Enabled {
 				deepmind.BeginBlock(block.Height)
-				deepmind.Block(block)
-				deepmind.EndBlock(block.Height)
+				for _, trx := range block.Transactions {
+					deepmind.BeginTrx(&trx)
+					for idx, event := range trx.Events {
+						deepmind.TrxBeginEvent(trx.Hash, &event)
+						for _, attr := range event.Attributes {
+							deepmind.TrxEventAttr(trx.Hash, uint64(idx), attr.Key, attr.Value)
+						}
+					}
+				}
+				deepmind.EndBlock(block)
 			}
 
 		case <-ctx.Done():
