@@ -15,11 +15,17 @@ type Node struct {
 	store  *Store
 }
 
-func NewNode(storeDir string, blockRate int, genesisHeight uint64, serverAddr string) *Node {
+func NewNode(
+	storeDir string,
+	blockRate int,
+	genesisHeight uint64,
+	stopHeight uint64,
+	serverAddr string,
+) *Node {
 	store := NewStore(storeDir)
 
 	return &Node{
-		engine: NewEngine(genesisHeight, blockRate),
+		engine: NewEngine(genesisHeight, stopHeight, blockRate),
 		store:  store,
 		server: NewServer(store, serverAddr),
 	}
