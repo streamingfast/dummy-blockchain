@@ -55,7 +55,7 @@ func initFlags(root *cobra.Command) error {
 	flags.Uint64Var(&cliOpts.GenesisHeight, "genesis-height", 1, "Blockchain genesis height")
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
-	flags.IntVar(&cliOpts.BlockRate, "block-rate", 1, "Block production rate (per second)")
+	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 	flags.BoolVar(&cliOpts.Instrumentation, "dm-enabled", false, "Enable instrumentation")
 

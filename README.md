@@ -55,7 +55,7 @@ Available Commands:
   start       Start blockchian service
 
 Flags:
-      --block-rate int        Block production rate (per second) (default 1)
+      --block-rate int        Block production rate (per minute) (default 60)
       --dm-enabled            Enable instrumentation
       --genesis-height uint   Blockchain genesis height (default 1)
   -h, --help                  help for dummy-blockchain
