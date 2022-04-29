@@ -39,7 +39,7 @@ make build
 
 ## Usage
 
-Run `./dummy-blockchain --help` to see list of all available flags:
+Run `./dchain --help` to see list of all available flags:
 
 ```
 CLI for the Dummy Chain
@@ -52,17 +52,17 @@ Available Commands:
   help        Help about any command
   init        Initialize local blockchain state
   reset       Reset local blockchain state
-  start       Start blockchian service
+  start       Start blockchain service
 
 Flags:
-      --block-rate int        Block production rate (per second) (default 1)
+      --block-rate int        Block production rate (per minute) (default 60)
       --dm-enabled            Enable instrumentation
       --genesis-height uint   Blockchain genesis height (default 1)
   -h, --help                  help for dummy-blockchain
       --log-level string      Logging level (default "info")
       --server-addr string    Server address (default "0.0.0.0:8080")
+      --stop-height uint      Stop block production at this height
       --store-dir string      Directory for storing blockchain state (default "./data")
-  -v, --version               version for dummy-blockchain
 
 Use "dummy-blockchain [command] --help" for more information about a command.
 ```

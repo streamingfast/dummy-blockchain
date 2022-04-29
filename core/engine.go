@@ -13,13 +13,14 @@ import (
 
 type Engine struct {
 	genesisHeight uint64
+	stopHeight    uint64
 	blockRate     time.Duration
 	blockChan     chan *types.Block
 	prevBlock     *types.Block
 }
 
-func NewEngine(genesisHeight uint64, rate int) Engine {
-	blockRate := time.Second / time.Duration(rate)
+func NewEngine(genesisHeight, stopHeight uint64, rate int) Engine {
+	blockRate := time.Minute / time.Duration(rate)
 
 	if genesisHeight == 0 {
 		genesisHeight = 1
@@ -27,6 +28,7 @@ func NewEngine(genesisHeight uint64, rate int) Engine {
 
 	return Engine{
 		genesisHeight: genesisHeight,
+		stopHeight:    stopHeight,
 		blockRate:     blockRate,
 		blockChan:     make(chan *types.Block),
 	}
@@ -38,13 +40,26 @@ func (e *Engine) Initialize(block *types.Block) error {
 }
 
 func (e *Engine) StartBlockProduction(ctx context.Context) {
+	ticker := time.NewTicker(e.blockRate)
+
 	logrus.WithField("rate", e.blockRate).Info("starting block producer")
+	if e.stopHeight > 0 {
+		logrus.WithField("stop_height", e.stopHeight).Info("block production will stop at height")
+		if e.prevBlock != nil && e.prevBlock.Height >= e.stopHeight {
+			ticker.Stop()
+		}
+	}
 
 	for {
 		select {
-		case <-time.Tick(e.blockRate):
+		case <-ticker.C:
 			block := e.createBlock()
 			e.blockChan <- &block
+
+			if e.stopHeight > 0 && block.Height >= e.stopHeight {
+				logrus.Info("reached stop height")
+				ticker.Stop()
+			}
 		case <-ctx.Done():
 			logrus.Info("stopping block producer")
 			close(e.blockChan)

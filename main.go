@@ -21,6 +21,7 @@ var cliOpts = struct {
 	BlockRate       int
 	ServerAddr      string
 	Instrumentation bool
+	StopHeight      uint64
 }{}
 
 func main() {
@@ -55,7 +56,8 @@ func initFlags(root *cobra.Command) error {
 	flags.Uint64Var(&cliOpts.GenesisHeight, "genesis-height", 1, "Blockchain genesis height")
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
-	flags.IntVar(&cliOpts.BlockRate, "block-rate", 1, "Block production rate (per second)")
+	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
+	flags.Uint64Var(&cliOpts.StopHeight, "stop-height", 0, "Stop block production at this height")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 	flags.BoolVar(&cliOpts.Instrumentation, "dm-enabled", false, "Enable instrumentation")
 
@@ -109,7 +111,7 @@ func makeResetCommand() *cobra.Command {
 func makeStartComand() *cobra.Command {
 	return &cobra.Command{
 		Use:          "start",
-		Short:        "Start blockchian service",
+		Short:        "Start blockchain service",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if cliOpts.BlockRate < 1 {
@@ -125,6 +127,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.StoreDir,
 				cliOpts.BlockRate,
 				cliOpts.GenesisHeight,
+				cliOpts.StopHeight,
 				cliOpts.ServerAddr,
 			)
 
