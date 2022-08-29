@@ -56,7 +56,7 @@ Available Commands:
 
 Flags:
       --block-rate int        Block production rate (per minute) (default 60)
-      --dm-enabled            Enable instrumentation
+      --firehose-enabled            Enable instrumentation
       --genesis-height uint   Blockchain genesis height (default 1)
   -h, --help                  help for dummy-blockchain
       --log-level string      Logging level (default "info")
@@ -91,9 +91,9 @@ INFO[2022-01-13T11:55:13-06:00] processing block                              ha
 To enable DeepMind instrumentation:
 
 ```
-./dummy-blockchain start --dm-enabled
+./dummy-blockchain start --firehose-enabled
 # Or using env var
-DM_ENABLED=1 ./dummy-blockchain start
+FILE_ENABLED=1 ./dummy-blockchain start
 ```
 
 Output will look like:
