@@ -93,7 +93,7 @@ To enable DeepMind instrumentation:
 ```
 ./dummy-blockchain start --firehose-enabled
 # Or using env var
-FILE_ENABLED=1 ./dummy-blockchain start
+FIREHOSE_ENABLED=1 ./dummy-blockchain start
 ```
 
 Output will look like:
