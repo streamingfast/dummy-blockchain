@@ -59,7 +59,7 @@ func initFlags(root *cobra.Command) error {
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
 	flags.Uint64Var(&cliOpts.StopHeight, "stop-height", 0, "Stop block production at this height")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
-	flags.BoolVar(&cliOpts.Instrumentation, "dm-enabled", false, "Enable instrumentation")
+	flags.BoolVar(&cliOpts.Instrumentation, "firehose-enabled", false, "Enable instrumentation")
 
 	return nil
 }
@@ -118,7 +118,7 @@ func makeStartComand() *cobra.Command {
 				return errors.New("block rate option must be greater than 1")
 			}
 
-			if cliOpts.Instrumentation || os.Getenv("DM_ENABLED") == "1" {
+			if cliOpts.Instrumentation || os.Getenv("FIREHOSE_ENABLED") == "1" {
 				initDeepMind()
 				defer deepmind.Shutdown()
 			}
