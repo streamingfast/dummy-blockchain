@@ -22,7 +22,8 @@ main() {
     fi
   done < ${change_log_file}
 
-  LINUX_X86_64_BIN_SUM="$(checksum "$binaries_dir/dummy-blockchain-x86_64-unknown-linux-gnu")"
+  NAME="dummy-blockchain"
+  LINUX_X86_64_BIN_SUM="$(checksum "$binaries_dir/$NAME-x86_64-unknown-linux-gnu")"
 
   OUTPUT="$(cat <<-END
 ## Changelog
@@ -30,7 +31,7 @@ ${CHANGE_LOG}
 ## Checksums
 |Assets | Checksum (sha256)|
 |-|-|
-|thegarii-x86_64-unknown-linux-gnu | ${LINUX_X86_64_BIN_SUM}|
+|$NAME-x86_64-unknown-linux-gnu | ${LINUX_X86_64_BIN_SUM}|
 END
 )"
 
