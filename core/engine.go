@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/streamingfast/dummy-blockchain/types"
 )
 

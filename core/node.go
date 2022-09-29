@@ -4,8 +4,7 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/streamingfast/dummy-blockchain/deepmind"
+	"github.com/streamingfast/dummy-blockchain/firehose"
 	"github.com/streamingfast/dummy-blockchain/types"
 )
 
@@ -76,18 +75,18 @@ func (node *Node) Start(ctx context.Context) error {
 				return err
 			}
 
-			if deepmind.Enabled {
-				deepmind.BeginBlock(block.Height)
+			if firehose.Enabled {
+				firehose.BeginBlock(block.Height)
 				for _, trx := range block.Transactions {
-					deepmind.BeginTrx(&trx)
+					firehose.BeginTrx(&trx)
 					for idx, event := range trx.Events {
-						deepmind.TrxBeginEvent(trx.Hash, &event)
+						firehose.TrxBeginEvent(trx.Hash, &event)
 						for _, attr := range event.Attributes {
-							deepmind.TrxEventAttr(trx.Hash, uint64(idx), attr.Key, attr.Value)
+							firehose.TrxEventAttr(trx.Hash, uint64(idx), attr.Key, attr.Value)
 						}
 					}
 				}
-				deepmind.EndBlock(block)
+				firehose.EndBlock(block)
 			}
 
 		case <-ctx.Done():

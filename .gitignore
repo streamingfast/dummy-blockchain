@@ -4,3 +4,4 @@ dchain
 data
 dist
 .idea
+.envrc

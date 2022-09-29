@@ -9,9 +9,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
 	"github.com/streamingfast/dummy-blockchain/core"
-	"github.com/streamingfast/dummy-blockchain/deepmind"
+	"github.com/streamingfast/dummy-blockchain/firehose"
 )
 
 var cliOpts = struct {
@@ -119,8 +118,8 @@ func makeStartComand() *cobra.Command {
 			}
 
 			if cliOpts.Instrumentation || os.Getenv("FIREHOSE_ENABLED") == "1" {
-				initDeepMind()
-				defer deepmind.Shutdown()
+				initFirehose()
+				defer firehose.Shutdown()
 			}
 
 			node := core.NewNode(
@@ -156,21 +155,21 @@ func makeStartComand() *cobra.Command {
 	}
 }
 
-func initDeepMind() {
+func initFirehose() {
 	// A global flag to enable instrumentation
-	dmOutput := os.Getenv("DM_OUTPUT")
+	firehoseLogsOutput := os.Getenv("FIREHOSE_LOGS_OUTPUT")
 
-	switch dmOutput {
+	switch firehoseLogsOutput {
 	case "", "stdout", "STDOUT":
-		deepmind.Enable(os.Stdout)
+		firehose.Enable(os.Stdout)
 	case "stderr", "STDERR":
-		deepmind.Enable(os.Stderr)
+		firehose.Enable(os.Stderr)
 	default:
-		dmFile, err := os.OpenFile(dmOutput, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0666)
+		outputFile, err := os.OpenFile(firehoseLogsOutput, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0666)
 		if err != nil {
-			logrus.WithError(err).Fatal("cant open DM output file")
+			logrus.WithError(err).Fatal("cant open Firehose logs output file")
 		}
-		deepmind.Enable(dmFile)
+		firehose.Enable(outputFile)
 	}
 }
 

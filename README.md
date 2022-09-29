@@ -1,15 +1,13 @@
 # Dummy Chain
 
 This dummy "blockchain" serves as a demonstration on how to instrument node for the
-Firehose integration. Instrumenter, "DeepMind" is a part responsible for data
+Firehose integration. Instrumentors, "firehose" is a part responsible for data
 extraction and could be turned on with an environment variable when running the chain
 process.
 
 ## Requirements
 
 - Go
-- Protobuf Tools
-
 ## Building
 
 Clone the repository:
@@ -19,27 +17,15 @@ git clone https://github.com/streamingfast/dummy-blockchain.git
 cd dummy-blockchain
 ```
 
-Install dependencies:
+Then install the binary:
 
 ```bash
-go mod download
-```
-
-Generate protobuf files (optional):
-
-```bash
-make proto
-```
-
-Then build the binary:
-
-```bash
-make build
+go install .
 ```
 
 ## Usage
 
-Run `./dchain --help` to see list of all available flags:
+Run `./dummy-blockchain --help` to see list of all available flags:
 
 ```
 CLI for the Dummy Chain
@@ -88,7 +74,7 @@ INFO[2022-01-13T11:55:12-06:00] processing block                              ha
 INFO[2022-01-13T11:55:13-06:00] processing block                              hash=e7f6c011776e8db7cd330b54174fd76f7d0216b612387a5ffcfb81e6f0919683 height=6
 ```
 
-To enable DeepMind instrumentation:
+To enable firehose instrumentation:
 
 ```
 ./dummy-blockchain start --firehose-enabled
@@ -111,25 +97,11 @@ FIRE BLOCK CAcSQDc5MDI2OTliZTQyYzhhOGU0NmZiYmI0NTAxNzI2NTE3ZTg2YjIyYzU2YTE4OWY3N
 FIRE BLOCK_END 7
 ```
 
-Customize DM log output with environment variable:
+Customize Firehose log output with environment variable:
 
-- `DM_OUTPUT=stdout` - Log to STDOUT (default)
-- `DM_OUTPUT=stderr` - Log to STDERR
-- `DM_OUTPUT=/path/to/file.log` - Log to regular file
-
-## Running in Docker
-
-Build the docker image:
-
-```bash
-make docker-build
-```
-
-Start the dummy blockchain process:
-
-```bash
-make docker-start
-```
+- `FIREHOSE_LOGS_OUTPUT=stdout` - Log to STDOUT (default)
+- `FIREHOSE_LOGS_OUTPUT=stderr` - Log to STDERR
+- `FIREHOSE_LOGS_OUTPUT=/path/to/file.log` - Log to regular file
 
 ## HTTP API
 
@@ -150,4 +122,4 @@ List of available endpoints:
 
 ## License
 
-TBD
+Apache 2.0
