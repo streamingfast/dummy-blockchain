@@ -1,15 +1,49 @@
 package types
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"math/big"
 	"time"
 )
 
+func MakeHash(data interface{}) string {
+	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%v", data)))
+	return fmt.Sprintf("%x", shaSum)
+}
+
+func GenesisBlock(height uint64) *Block {
+	genesisTime, err := time.Parse(time.RFC3339, "2024-01-01T00:00:00Z")
+	if err != nil {
+		panic(err)
+	}
+
+	header := &BlockHeader{
+		Height:    height,
+		Hash:      MakeHash(height),
+		FinalNum:  height,
+		FinalHash: MakeHash(height),
+		Timestamp: genesisTime,
+	}
+
+	return &Block{
+		Header:       header,
+		Transactions: nil,
+	}
+}
+
+type BlockHeader struct {
+	Height    uint64    `json:"height"`
+	Hash      string    `json:"hash"`
+	PrevNum   *uint64   `json:"prev_num"`
+	PrevHash  *string   `json:"prev_hash"`
+	FinalNum  uint64    `json:"final_num"`
+	FinalHash string    `json:"final_hash"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 type Block struct {
-	Height       uint64        `json:"height"`
-	Hash         string        `json:"hash"`
-	PrevHash     string        `json:"prev_hash"`
-	Timestamp    time.Time     `json:"timestamp"`
+	Header       *BlockHeader  `json:"header"`
 	Transactions []Transaction `json:"transactions"`
 }
 

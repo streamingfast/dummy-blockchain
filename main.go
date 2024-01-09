@@ -10,17 +10,17 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/streamingfast/dummy-blockchain/core"
-	"github.com/streamingfast/dummy-blockchain/firehose"
+	"github.com/streamingfast/dummy-blockchain/tracer"
 )
 
 var cliOpts = struct {
-	GenesisHeight   uint64
-	LogLevel        string
-	StoreDir        string
-	BlockRate       int
-	ServerAddr      string
-	Instrumentation bool
-	StopHeight      uint64
+	GenesisHeight uint64
+	LogLevel      string
+	StoreDir      string
+	BlockRate     int
+	ServerAddr    string
+	Tracer        string
+	StopHeight    uint64
 }{}
 
 func main() {
@@ -58,7 +58,7 @@ func initFlags(root *cobra.Command) error {
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
 	flags.Uint64Var(&cliOpts.StopHeight, "stop-height", 0, "Stop block production at this height")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
-	flags.BoolVar(&cliOpts.Instrumentation, "firehose-enabled", false, "Enable instrumentation")
+	flags.StringVar(&cliOpts.Tracer, "tracer", "", "The tracer to use, either <empty>, none or firehose")
 
 	return nil
 }
@@ -83,7 +83,7 @@ func makeInitCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logrus.WithField("dir", cliOpts.StoreDir).Info("initializing chain store")
 
-			store := core.NewStore(cliOpts.StoreDir)
+			store := core.NewStore(cliOpts.StoreDir, cliOpts.GenesisHeight)
 			return store.Initialize()
 		},
 	}
@@ -117,9 +117,9 @@ func makeStartComand() *cobra.Command {
 				return errors.New("block rate option must be greater than 1")
 			}
 
-			if cliOpts.Instrumentation || os.Getenv("FIREHOSE_ENABLED") == "1" {
-				initFirehose()
-				defer firehose.Shutdown()
+			var blockTracer tracer.Tracer
+			if cliOpts.Tracer == "firehose" {
+				blockTracer = &tracer.FirehoseTracer{}
 			}
 
 			node := core.NewNode(
@@ -128,6 +128,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.GenesisHeight,
 				cliOpts.StopHeight,
 				cliOpts.ServerAddr,
+				blockTracer,
 			)
 
 			if err := node.Initialize(); err != nil {
@@ -152,24 +153,6 @@ func makeStartComand() *cobra.Command {
 
 			return nil
 		},
-	}
-}
-
-func initFirehose() {
-	// A global flag to enable instrumentation
-	firehoseLogsOutput := os.Getenv("FIREHOSE_LOGS_OUTPUT")
-
-	switch firehoseLogsOutput {
-	case "", "stdout", "STDOUT":
-		firehose.Enable(os.Stdout)
-	case "stderr", "STDERR":
-		firehose.Enable(os.Stderr)
-	default:
-		outputFile, err := os.OpenFile(firehoseLogsOutput, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0666)
-		if err != nil {
-			logrus.WithError(err).Fatal("cant open Firehose logs output file")
-		}
-		firehose.Enable(outputFile)
 	}
 }
 

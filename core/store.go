@@ -3,12 +3,10 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/streamingfast/dummy-blockchain/types"
 )
 
@@ -17,23 +15,25 @@ const (
 )
 
 type Store struct {
-	rootDir      string
-	blocksDir    string
-	metaPath     string
-	currentGroup int
+	rootDir       string
+	blocksDir     string
+	metaPath      string
+	currentGroup  int
+	genesisHeight uint64
 
 	meta struct {
-		StartHeight uint64 `json:"start_height"`
-		TipHeight   uint64 `json:"tip_height"`
+		FinalHeight uint64 `json:"final_height"`
+		HeadHeight  uint64 `json:"head_height"`
 	}
 }
 
-func NewStore(rootDir string) *Store {
+func NewStore(rootDir string, genesisHeight uint64) *Store {
 	return &Store{
-		rootDir:      rootDir,
-		blocksDir:    filepath.Join(rootDir, "blocks"),
-		metaPath:     filepath.Join(rootDir, "meta.json"),
-		currentGroup: -1,
+		rootDir:       rootDir,
+		blocksDir:     filepath.Join(rootDir, "blocks"),
+		metaPath:      filepath.Join(rootDir, "meta.json"),
+		currentGroup:  -1,
+		genesisHeight: genesisHeight,
 	}
 }
 
@@ -55,10 +55,7 @@ func (store *Store) Initialize() error {
 }
 
 func (store *Store) WriteBlock(block *types.Block) error {
-	store.meta.TipHeight = block.Height
-	if store.meta.StartHeight == 0 {
-		store.meta.StartHeight = block.Height
-	}
+	store.meta.HeadHeight = block.Header.Height
 
 	raw, err := store.encodeBlock(block)
 	if err != nil {
@@ -70,7 +67,7 @@ func (store *Store) WriteBlock(block *types.Block) error {
 		return err
 	}
 
-	group := int(store.blockGroup(block.Height))
+	group := int(store.blockGroup(block.Header.Height))
 	if group != store.currentGroup {
 		groupDir := fmt.Sprintf("%s/%010d", store.blocksDir, group)
 		if err := os.MkdirAll(groupDir, 0700); err != nil {
@@ -79,21 +76,25 @@ func (store *Store) WriteBlock(block *types.Block) error {
 		store.currentGroup = group
 	}
 
-	if err := ioutil.WriteFile(store.blockFilename(block.Height), raw, 0655); err != nil {
+	if err := os.WriteFile(store.blockFilename(block.Header.Height), raw, 0655); err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(store.metaPath, meta, 0655)
+	return os.WriteFile(store.metaPath, meta, 0655)
 }
 
 func (store *Store) CurrentBlock() (*types.Block, error) {
-	return store.ReadBlock(store.meta.TipHeight)
+	return store.ReadBlock(store.meta.HeadHeight)
 }
 
 func (store *Store) ReadBlock(height uint64) (*types.Block, error) {
+	if height == store.genesisHeight {
+		return types.GenesisBlock(store.genesisHeight), nil
+	}
+
 	block := &types.Block{}
 
-	data, err := ioutil.ReadFile(store.blockFilename(height))
+	data, err := os.ReadFile(store.blockFilename(height))
 	if err != nil {
 		return nil, err
 	}
@@ -119,12 +120,12 @@ func (store *Store) readMeta() error {
 			return err
 		}
 
-		if err := ioutil.WriteFile(store.metaPath, meta, 0655); err != nil {
+		if err := os.WriteFile(store.metaPath, meta, 0655); err != nil {
 			return err
 		}
 	}
 
-	data, err := ioutil.ReadFile(store.metaPath)
+	data, err := os.ReadFile(store.metaPath)
 	if err != nil {
 		return err
 	}

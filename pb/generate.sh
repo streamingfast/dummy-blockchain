@@ -60,20 +60,20 @@ function checks() {
   # version waits forever. So we pipe some wrong input to make it exit fast. This in the new version
   # which supports `--version` correctly print the version anyway and discard the standard input
   # so it's good with both version.
-  result=`printf "" | protoc-gen-go --version 2>&1 | grep -Eo "v1.[2-9][6-9]"`
+  result=`printf "" | protoc-gen-go --version 2>&1 | grep -Eo "v1.(2[6-9]|[3-9][0-9]+)"`
   if [[ "$result" == "" ]]; then
     echo "Your version of 'protoc-gen-go' (at `which protoc-gen-go`) is not recent enough."
     echo ""
     echo "To fix your problem, perform those commands:"
     echo ""
-    echo "  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.0"
-    echo "  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0"
+    echo "  go install google.golang.org/protobuf/cmd/protoc-gen-go@latest"
+    echo "  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@vlatest"
     echo ""
     echo "If everything is working as expetcted, the command:"
     echo ""
     echo "  protoc-gen-go --version"
     echo ""
-    echo "Should print 'protoc-gen-go v1.27.0' (if it just hangs, you don't have the correct version)"
+    echo "Should print 'protoc-gen-go v1.32.0' (if it just hangs, you don't have the correct version)"
     exit 1
   fi
 }

@@ -8,50 +8,17 @@ process.
 ## Requirements
 
 - Go
-## Building
 
-Clone the repository:
+## Getting Started
 
-```bash
-git clone https://github.com/streamingfast/dummy-blockchain.git
-cd dummy-blockchain
-```
-
-Then install the binary:
+To install the binary:
 
 ```bash
-go install .
+go install github.com/streamingfast/dummy-blockchain@laest
 ```
 
-## Usage
-
-Run `./dummy-blockchain --help` to see list of all available flags:
-
-```
-CLI for the Dummy Chain
-
-Usage:
-  dummy-blockchain [command]
-
-Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  help        Help about any command
-  init        Initialize local blockchain state
-  reset       Reset local blockchain state
-  start       Start blockchain service
-
-Flags:
-      --block-rate int        Block production rate (per minute) (default 60)
-      --firehose-enabled            Enable instrumentation
-      --genesis-height uint   Blockchain genesis height (default 1)
-  -h, --help                  help for dummy-blockchain
-      --log-level string      Logging level (default "info")
-      --server-addr string    Server address (default "0.0.0.0:8080")
-      --stop-height uint      Stop block production at this height
-      --store-dir string      Directory for storing blockchain state (default "./data")
-
-Use "dummy-blockchain [command] --help" for more information about a command.
-```
+> [!NOTE]
+> Ensure `go env GOPATH` directoy is part of your PATH (export PATH="`` `go env GOPATH` ``:$PATH")
 
 To start the chain, run:
 
@@ -77,31 +44,30 @@ INFO[2022-01-13T11:55:13-06:00] processing block                              ha
 To enable firehose instrumentation:
 
 ```
-./dummy-blockchain start --firehose-enabled
-# Or using env var
-FIREHOSE_ENABLED=1 ./dummy-blockchain start
+./dummy-blockchain start --tracer=firehose
 ```
 
-Output will look like:
+Firehose logger statement will be printed as blocks are executed/produced. This mode is meant to be run
+using by a Firehose `reader-node`, see https://github.com/streamingfast/firehose-acme.
 
+## Tracer
+
+This project showcase a "fake" blockchain's node codebase. For developers looking into integrating a native Firehose integration, we suggest to integrate in blockchain's client code directly by some form of tracing plugin that is able to receive all the important callback's while transactions are execution integrating as deeply as wanted.
+
+You will see here in [tracer/tracer.go](./tracer/tracer.go) and [tracer/firehose_tracer.go](./tracer/firehose_tracer.go) a sketch of such "plugin" in Golang, `geth` can be inspected to see a full fledged block synchronization tracing plugin in a production codebase.
+
+The output format must strictly respect https://github.com/streamingfast/firehose-core standard, the [tracer/firehose_tracer.go](./tracer/firehose_tracer.go) implementation shows how we suggest implementing such tracer, you are free to implement the way you like.
+
+## Building
+
+Clone the repository:
+
+```bash
+git clone https://github.com/streamingfast/dummy-blockchain.git
+cd dummy-blockchain
+
+go run . start
 ```
-INFO[2022-01-13T11:55:52-06:00] initializing node
-INFO[2022-01-13T11:55:52-06:00] initializing store
-DEBU[2022-01-13T11:55:52-06:00] creating store root directory                 dir=./data
-INFO[2022-01-13T11:55:52-06:00] loading last block                            tip=6
-INFO[2022-01-13T11:55:52-06:00] initializing engine
-INFO[2022-01-13T11:55:52-06:00] starting block producer                       rate=1s
-INFO[2022-01-13T11:55:53-06:00] processing block                              hash=7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451 height=7
-FIRE BLOCK_BEGIN 7
-FIRE BLOCK CAcSQDc5MDI2OTliZTQyYzhhOGU0NmZiYmI0NTAxNzI2NTE3ZTg2YjIyYzU2YTE4OWY3NjI1YTZkYTQ5MDgxYjI0NTEaQGU3ZjZjMDExNzc2ZThkYjdjZDMzMGI1NDE3NGZkNzZmN2QwMjE2YjYxMjM4N2E1ZmZjZmI4MWU2ZjA5MTk2ODMqjAEKCHRyYW5zZmVyEkBiMTEwZDg4OWUzNGU2MTdlMmIyYmZmNTdhYWMzNTU3Njc2YzJmNjgxZjM2NWJhZDVhODk2MTVkN2E4MDZmMGY0GgoweERFQURCRUFGIgoweEJBQUFBQUFEKgAyBAoCJxA4AUIcCg50b2tlbl90cmFuc2ZlchIKCgNmb28SA2JhciqSAQoIdHJhbnNmZXISQDBlYzE5MmMwZjkwZDEzMzJmMmFiY2E0Mzk4NTk2ZDM5Nzg0MzRlY2JhZTZhYmVhOGZmZDk4OTQxMmI1OTI0NTgaCjB4REVBREJFQUYiCjB4QkFBQUFBQUQqBgoEO5rKADIECgInEDgBQhwKDnRva2VuX3RyYW5zZmVyEgoKA2ZvbxIDYmFyKpIBCgh0cmFuc2ZlchJAMWFlNWEwYzkwMDE3Mzk4NzllZjgxMmE3Y2IzZjMyOTQyMzNmNTBlNWQxZGJkZTc0NzFiNDUxNjMzMDdjNmNkORoKMHhERUFEQkVBRiIKMHhCQUFBQUFBRCoGCgR3NZQAMgQKAicQOAFCHAoOdG9rZW5fdHJhbnNmZXISCgoDZm9vEgNiYXIqkgEKCHRyYW5zZmVyEkBiNjJmODNhYzc5MmJhYWNkMTdmNDI4NTg1NDM3Yzg0NTY2NjlkMGM1MGNmYjVmZGMxMWM5YTY3NTgxZDgxMzExGgoweERFQURCRUFGIgoweEJBQUFBQUFEKgYKBLLQXgAyBAoCJxA4AUIcCg50b2tlbl90cmFuc2ZlchIKCgNmb28SA2JhciqSAQoIdHJhbnNmZXISQGI5YjUwYzU5ZjQyNTFlOWQyZDRkYzQ5Mjc1ZWM0NzYwYTNjOTcwYTllNWQ5MjU0OGQwNDg5MzIzNDkzYmFkODUaCjB4REVBREJFQUYiCjB4QkFBQUFBQUQqBgoE7msoADIECgInEDgBQhwKDnRva2VuX3RyYW5zZmVyEgoKA2ZvbxIDYmFyKpMBCgh0cmFuc2ZlchJANWUzZjViZDMyMDYxNTQ3ZjdkMTAzNWQ0NDg2NGU5Mjg2YTE1OTRiOWJkMDUyOWMzMTU5ODhkOWNkMDdiYzU5MxoKMHhERUFEQkVBRiIKMHhCQUFBQUFBRCoHCgUBKgXyADIECgInEDgBQhwKDnRva2VuX3RyYW5zZmVyEgoKA2ZvbxIDYmFyKpMBCgh0cmFuc2ZlchJAZmYwM2ViZDU2OWJiZTgzMzg3ZTU2M2NkMTdkZDcxODBiZWI3MmNiOGMyYmZmODY3MDAyYzdhZGQyMjUxNGExMxoKMHhERUFEQkVBRiIKMHhCQUFBQUFBRCoHCgUBZaC8ADIECgInEDgBQhwKDnRva2VuX3RyYW5zZmVyEgoKA2ZvbxIDYmFy
-FIRE BLOCK_END 7
-```
-
-Customize Firehose log output with environment variable:
-
-- `FIREHOSE_LOGS_OUTPUT=stdout` - Log to STDOUT (default)
-- `FIREHOSE_LOGS_OUTPUT=stderr` - Log to STDERR
-- `FIREHOSE_LOGS_OUTPUT=/path/to/file.log` - Log to regular file
 
 ## HTTP API
 

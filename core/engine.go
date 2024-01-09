@@ -16,6 +16,7 @@ type Engine struct {
 	blockRate     time.Duration
 	blockChan     chan *types.Block
 	prevBlock     *types.Block
+	finalBlock    *types.Block
 }
 
 func NewEngine(genesisHeight, stopHeight uint64, rate int) Engine {
@@ -33,8 +34,14 @@ func NewEngine(genesisHeight, stopHeight uint64, rate int) Engine {
 	}
 }
 
-func (e *Engine) Initialize(block *types.Block) error {
-	e.prevBlock = block
+func (e *Engine) Initialize(prevBlock *types.Block, finalBlock *types.Block) error {
+	e.prevBlock = prevBlock
+	e.finalBlock = finalBlock
+
+	if finalBlock == nil {
+		return fmt.Errorf("final block cannot be nil")
+	}
+
 	return nil
 }
 
@@ -44,7 +51,7 @@ func (e *Engine) StartBlockProduction(ctx context.Context) {
 	logrus.WithField("rate", e.blockRate).Info("starting block producer")
 	if e.stopHeight > 0 {
 		logrus.WithField("stop_height", e.stopHeight).Info("block production will stop at height")
-		if e.prevBlock != nil && e.prevBlock.Height >= e.stopHeight {
+		if e.prevBlock != nil && e.prevBlock.Header.Height >= e.stopHeight {
 			ticker.Stop()
 		}
 	}
@@ -53,9 +60,9 @@ func (e *Engine) StartBlockProduction(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			block := e.createBlock()
-			e.blockChan <- &block
+			e.blockChan <- block
 
-			if e.stopHeight > 0 && block.Height >= e.stopHeight {
+			if e.stopHeight > 0 && block.Header.Height >= e.stopHeight {
 				logrus.Info("reached stop height")
 				ticker.Stop()
 			}
@@ -71,40 +78,51 @@ func (e *Engine) Subscription() <-chan *types.Block {
 	return e.blockChan
 }
 
-func (e *Engine) createBlock() types.Block {
-	block := types.Block{
-		Timestamp:    time.Now().UTC(),
+func (e *Engine) createBlock() *types.Block {
+	if e.prevBlock == nil {
+		logrus.WithField("height", e.genesisHeight).Info("starting from genesis block height")
+		genesisBlock := types.GenesisBlock(e.genesisHeight)
+		e.prevBlock = genesisBlock
+		e.finalBlock = genesisBlock
+
+		return genesisBlock
+	}
+
+	block := &types.Block{
+		Header: &types.BlockHeader{
+			Height:    e.prevBlock.Header.Height + 1,
+			Hash:      types.MakeHash(e.prevBlock.Header.Height + 1),
+			PrevNum:   &e.prevBlock.Header.Height,
+			PrevHash:  &e.prevBlock.Header.Hash,
+			FinalNum:  e.finalBlock.Header.Height,
+			FinalHash: e.finalBlock.Header.Hash,
+		},
 		Transactions: []types.Transaction{},
 	}
 
-	if e.prevBlock != nil { // Continue the chain
-		block.Height = e.prevBlock.Height + 1
-		block.Hash = makeHash(block.Height)
-		block.PrevHash = e.prevBlock.Hash
-	} else { // Start from genesis height
-		logrus.WithField("height", e.genesisHeight).Info("starting from genesis block height")
-
-		block.Height = e.genesisHeight
-		block.Hash = makeHash(e.genesisHeight)
-		block.PrevHash = makeHash(e.genesisHeight - 1)
-	}
-
-	for i := uint64(0); i < block.Height%10; i++ {
+	trxCount := min(block.Header.Height%10, 500)
+	for i := uint64(0); i < trxCount; i++ {
 		tx := types.Transaction{
 			Type:     "transfer",
-			Hash:     makeHash(fmt.Sprintf("%v-%v", block.Height, i)),
+			Hash:     types.MakeHash(fmt.Sprintf("%v-%v", block.Header.Height, i)),
 			Sender:   "0xDEADBEEF",
 			Receiver: "0xBAAAAAAD",
 			Amount:   big.NewInt(int64(i * 1000000000)),
 			Fee:      big.NewInt(10000),
 			Success:  true,
-			Events:   e.generateEvents(block.Height),
+			Events:   e.generateEvents(block.Header.Height),
 		}
 
 		block.Transactions = append(block.Transactions, tx)
 	}
 
-	e.prevBlock = &block
+	e.prevBlock = block
+
+	if block.Header.Height%10 == 0 {
+		logrus.WithField("height", block.Header.Height).Info("produced block is now the final block")
+		e.finalBlock = block
+	}
+
 	return block
 }
 
