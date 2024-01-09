@@ -59,12 +59,14 @@ func (e *Engine) StartBlockProduction(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			block := e.createBlock()
-			e.blockChan <- block
+			for _, block := range e.createBlocks() {
+				e.blockChan <- block
 
-			if e.stopHeight > 0 && block.Header.Height >= e.stopHeight {
-				logrus.Info("reached stop height")
-				ticker.Stop()
+				if e.stopHeight > 0 && block.Header.Height >= e.stopHeight {
+					logrus.Info("reached stop height")
+					ticker.Stop()
+					return
+				}
 			}
 		case <-ctx.Done():
 			logrus.Info("stopping block producer")
@@ -78,52 +80,77 @@ func (e *Engine) Subscription() <-chan *types.Block {
 	return e.blockChan
 }
 
-func (e *Engine) createBlock() *types.Block {
+func (e *Engine) createBlocks() (out []*types.Block) {
 	if e.prevBlock == nil {
-		logrus.WithField("height", e.genesisHeight).Info("starting from genesis block height")
 		genesisBlock := types.GenesisBlock(e.genesisHeight)
+		logrus.WithField("block", blockRef{genesisBlock.Header.Hash, e.genesisHeight}).Info("starting from genesis block height")
 		e.prevBlock = genesisBlock
 		e.finalBlock = genesisBlock
 
-		return genesisBlock
+		out = append(out, genesisBlock)
+		return
 	}
 
-	block := &types.Block{
-		Header: &types.BlockHeader{
-			Height:    e.prevBlock.Header.Height + 1,
-			Hash:      types.MakeHash(e.prevBlock.Header.Height + 1),
-			PrevNum:   &e.prevBlock.Header.Height,
-			PrevHash:  &e.prevBlock.Header.Hash,
-			FinalNum:  e.finalBlock.Header.Height,
-			FinalHash: e.finalBlock.Header.Hash,
-		},
-		Transactions: []types.Transaction{},
+	heightToProduce := e.prevBlock.Header.Height + 1
+	if heightToProduce%13 == 0 {
+		heightToProduce += 1
+		logrus.Info(fmt.Sprintf("skipping block #%d that is a multiple of 13, producing %d instead", heightToProduce-1, heightToProduce))
 	}
 
-	trxCount := min(block.Header.Height%10, 500)
+	if heightToProduce%17 == 0 {
+		if heightToProduce%2 == 0 {
+			logrus.Info("producing 2 block fork sequence")
+			firstFork := e.newBlock(heightToProduce, ptr(uint64(1)), e.prevBlock)
+			secondFork := e.newBlock(heightToProduce+1, ptr(uint64(2)), firstFork)
+
+			out = append(out, firstFork, secondFork)
+		} else {
+			logrus.Info("producing 1 block fork sequence")
+			out = append(out, e.newBlock(heightToProduce, ptr(uint64(1)), e.prevBlock))
+		}
+	}
+
+	block := e.newBlock(heightToProduce, nil, e.prevBlock)
+
+	trxCount := min(heightToProduce%10, 500)
 	for i := uint64(0); i < trxCount; i++ {
 		tx := types.Transaction{
 			Type:     "transfer",
-			Hash:     types.MakeHash(fmt.Sprintf("%v-%v", block.Header.Height, i)),
+			Hash:     types.MakeHash(fmt.Sprintf("%v-%v", heightToProduce, i)),
 			Sender:   "0xDEADBEEF",
 			Receiver: "0xBAAAAAAD",
 			Amount:   big.NewInt(int64(i * 1000000000)),
 			Fee:      big.NewInt(10000),
 			Success:  true,
-			Events:   e.generateEvents(block.Header.Height),
+			Events:   e.generateEvents(heightToProduce),
 		}
 
 		block.Transactions = append(block.Transactions, tx)
 	}
 
-	e.prevBlock = block
+	out = append(out, block)
 
+	e.prevBlock = block
 	if block.Header.Height%10 == 0 {
-		logrus.WithField("height", block.Header.Height).Info("produced block is now the final block")
+		logrus.WithField("block", blockRef{block.Header.Hash, block.Header.Height}).Info("produced block is now the final block")
 		e.finalBlock = block
 	}
 
-	return block
+	return
+}
+
+func (e *Engine) newBlock(height uint64, nonce *uint64, parent *types.Block) *types.Block {
+	return &types.Block{
+		Header: &types.BlockHeader{
+			Height:    height,
+			Hash:      types.MakeHashNonce(height, nonce),
+			PrevNum:   &parent.Header.Height,
+			PrevHash:  &parent.Header.Hash,
+			FinalNum:  e.finalBlock.Header.Height,
+			FinalHash: e.finalBlock.Header.Hash,
+		},
+		Transactions: []types.Transaction{},
+	}
 }
 
 func (e *Engine) generateEvents(height uint64) []types.Event {
@@ -157,4 +184,8 @@ func (e *Engine) generateEvents(height uint64) []types.Event {
 	}
 
 	return events
+}
+
+func ptr[T any](t T) *T {
+	return &t
 }

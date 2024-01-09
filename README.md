@@ -50,6 +50,12 @@ To enable firehose instrumentation:
 Firehose logger statement will be printed as blocks are executed/produced. This mode is meant to be run
 using by a Firehose `reader-node`, see https://github.com/streamingfast/firehose-acme.
 
+### Block Skipping and Forks
+
+The dummy chain skips a block that are divisible by 13 so for example we are at block #25 (abc) the next produced block will be #27 (def) and #26 will never be produced.
+
+THe dummy chain also generates forks at regular interval, every 17 blocks. The generated fork sequence is of 1 block if the current block is odd otherwise if it's even, a 2 blocks fork sequence will be generated.
+
 ## Tracer
 
 This project showcase a "fake" blockchain's node codebase. For developers looking into integrating a native Firehose integration, we suggest to integrate in blockchain's client code directly by some form of tracing plugin that is able to receive all the important callback's while transactions are execution integrating as deeply as wanted.

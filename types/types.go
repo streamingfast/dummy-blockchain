@@ -2,13 +2,23 @@ package types
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"time"
 )
 
 func MakeHash(data interface{}) string {
-	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%v", data)))
+	return MakeHashNonce(data, nil)
+}
+
+func MakeHashNonce(data interface{}, nonce *uint64) string {
+	content := []byte(fmt.Sprintf("%v", data))
+	if nonce != nil {
+		content = binary.LittleEndian.AppendUint64(content, *nonce)
+	}
+
+	shaSum := sha256.Sum256(content)
 	return fmt.Sprintf("%x", shaSum)
 }
 

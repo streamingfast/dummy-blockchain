@@ -129,8 +129,9 @@ func (node *Node) Start(ctx context.Context) error {
 
 func (node *Node) processBlock(block *types.Block) error {
 	logrus.
-		WithField("height", block.Header.Height).
-		WithField("hash", block.Header.Hash).
+		WithField("block", blockRef{block.Header.Hash, block.Header.Height}).
+		WithField("parent_block", blockRef{valueOr(block.Header.PrevHash, ""), valueOr(block.Header.PrevNum, 0)}).
+		WithField("final_block", blockRef{block.Header.FinalHash, block.Header.FinalNum}).
 		Info("processing block")
 
 	if err := node.store.WriteBlock(block); err != nil {
@@ -138,4 +139,37 @@ func (node *Node) processBlock(block *types.Block) error {
 	}
 
 	return nil
+}
+
+func shortHash(in string) string {
+	return in[:6] + "..." + in[len(in)-6:]
+}
+
+func shortHashPtr(in *string) string {
+	if in == nil {
+		return "<nil>"
+	}
+
+	return shortHash(*in)
+}
+
+func valueOr[T any](t *T, def T) T {
+	if t == nil {
+		return def
+	}
+
+	return *t
+}
+
+type blockRef struct {
+	hash   string
+	number uint64
+}
+
+func (ref blockRef) String() string {
+	if ref.hash == "" {
+		return "<nil>"
+	}
+
+	return fmt.Sprintf("#%d (%s)", ref.number, shortHash(ref.hash))
 }

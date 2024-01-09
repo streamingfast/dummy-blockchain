@@ -56,6 +56,7 @@ func (store *Store) Initialize() error {
 
 func (store *Store) WriteBlock(block *types.Block) error {
 	store.meta.HeadHeight = block.Header.Height
+	store.meta.FinalHeight = block.Header.FinalNum
 
 	raw, err := store.encodeBlock(block)
 	if err != nil {
