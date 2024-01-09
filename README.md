@@ -14,7 +14,7 @@ process.
 To install the binary:
 
 ```bash
-go install github.com/streamingfast/dummy-blockchain@laest
+go install github.com/streamingfast/dummy-blockchain@latest
 ```
 
 > [!NOTE]
