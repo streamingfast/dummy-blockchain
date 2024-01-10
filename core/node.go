@@ -35,7 +35,7 @@ func NewNode(
 }
 
 func (node *Node) Initialize() error {
-	logrus.Info("initializing node")
+	logrus.WithField("genesis_height", node.store.genesisHeight).Info("initializing node")
 
 	logrus.Info("initializing store")
 	if err := node.store.Initialize(); err != nil {

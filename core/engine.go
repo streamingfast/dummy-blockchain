@@ -22,10 +22,6 @@ type Engine struct {
 func NewEngine(genesisHeight, stopHeight uint64, rate int) Engine {
 	blockRate := time.Minute / time.Duration(rate)
 
-	if genesisHeight == 0 {
-		genesisHeight = 1
-	}
-
 	return Engine{
 		genesisHeight: genesisHeight,
 		stopHeight:    stopHeight,

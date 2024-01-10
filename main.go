@@ -70,6 +70,7 @@ func initLogger() error {
 	}
 
 	logrus.SetLevel(level)
+	logrus.SetOutput(os.Stderr)
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 
 	return nil
@@ -81,7 +82,7 @@ func makeInitCommand() *cobra.Command {
 		Short:        "Initialize local blockchain state",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logrus.WithField("dir", cliOpts.StoreDir).Info("initializing chain store")
+			logrus.WithField("dir", cliOpts.StoreDir).WithField("genesis_height", cliOpts.GenesisHeight).Info("initializing chain store")
 
 			store := core.NewStore(cliOpts.StoreDir, cliOpts.GenesisHeight)
 			return store.Initialize()
