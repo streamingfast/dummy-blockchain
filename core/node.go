@@ -20,6 +20,7 @@ func NewNode(
 	storeDir string,
 	blockRate int,
 	genesisHeight uint64,
+	genesisBlockBurst uint64,
 	stopHeight uint64,
 	serverAddr string,
 	tracer tracer.Tracer,
@@ -27,7 +28,7 @@ func NewNode(
 	store := NewStore(storeDir, genesisHeight)
 
 	return &Node{
-		engine: NewEngine(genesisHeight, stopHeight, blockRate),
+		engine: NewEngine(genesisHeight, genesisBlockBurst, stopHeight, blockRate),
 		store:  store,
 		server: NewServer(store, serverAddr),
 		tracer: tracer,
@@ -35,7 +36,9 @@ func NewNode(
 }
 
 func (node *Node) Initialize() error {
-	logrus.WithField("genesis_height", node.store.genesisHeight).Info("initializing node")
+	logrus.
+		WithField("genesis_height", node.store.genesisHeight).
+		Info("initializing node")
 
 	logrus.Info("initializing store")
 	if err := node.store.Initialize(); err != nil {

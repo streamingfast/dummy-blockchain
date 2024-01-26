@@ -14,13 +14,14 @@ import (
 )
 
 var cliOpts = struct {
-	GenesisHeight uint64
-	LogLevel      string
-	StoreDir      string
-	BlockRate     int
-	ServerAddr    string
-	Tracer        string
-	StopHeight    uint64
+	GenesisHeight     uint64
+	GenesisBlockBurst uint64
+	LogLevel          string
+	StoreDir          string
+	BlockRate         int
+	ServerAddr        string
+	Tracer            string
+	StopHeight        uint64
 }{}
 
 func main() {
@@ -53,6 +54,7 @@ func initFlags(root *cobra.Command) error {
 	flags := root.PersistentFlags()
 
 	flags.Uint64Var(&cliOpts.GenesisHeight, "genesis-height", 1, "Blockchain genesis height")
+	flags.Uint64Var(&cliOpts.GenesisBlockBurst, "genesis-block-burst", 0, "The amount of block to produce when initially starting from genesis block")
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
@@ -82,7 +84,10 @@ func makeInitCommand() *cobra.Command {
 		Short:        "Initialize local blockchain state",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logrus.WithField("dir", cliOpts.StoreDir).WithField("genesis_height", cliOpts.GenesisHeight).Info("initializing chain store")
+			logrus.
+				WithField("dir", cliOpts.StoreDir).
+				WithField("genesis_height", cliOpts.GenesisHeight).
+				Info("initializing chain store")
 
 			store := core.NewStore(cliOpts.StoreDir, cliOpts.GenesisHeight)
 			return store.Initialize()
@@ -127,6 +132,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.StoreDir,
 				cliOpts.BlockRate,
 				cliOpts.GenesisHeight,
+				cliOpts.GenesisBlockBurst,
 				cliOpts.StopHeight,
 				cliOpts.ServerAddr,
 				blockTracer,

@@ -11,22 +11,24 @@ import (
 )
 
 type Engine struct {
-	genesisHeight uint64
-	stopHeight    uint64
-	blockRate     time.Duration
-	blockChan     chan *types.Block
-	prevBlock     *types.Block
-	finalBlock    *types.Block
+	genesisHeight     uint64
+	genesisBlockBurst uint64
+	stopHeight        uint64
+	blockRate         time.Duration
+	blockChan         chan *types.Block
+	prevBlock         *types.Block
+	finalBlock        *types.Block
 }
 
-func NewEngine(genesisHeight, stopHeight uint64, rate int) Engine {
+func NewEngine(genesisHeight, genesisBlockBurst, stopHeight uint64, rate int) Engine {
 	blockRate := time.Minute / time.Duration(rate)
 
 	return Engine{
-		genesisHeight: genesisHeight,
-		stopHeight:    stopHeight,
-		blockRate:     blockRate,
-		blockChan:     make(chan *types.Block),
+		genesisHeight:     genesisHeight,
+		genesisBlockBurst: genesisBlockBurst,
+		stopHeight:        stopHeight,
+		blockRate:         blockRate,
+		blockChan:         make(chan *types.Block),
 	}
 }
 
@@ -84,6 +86,11 @@ func (e *Engine) createBlocks() (out []*types.Block) {
 		e.finalBlock = genesisBlock
 
 		out = append(out, genesisBlock)
+
+		for len(out)-1 < int(e.genesisBlockBurst) {
+			out = append(out, e.createBlocks()...)
+		}
+
 		return
 	}
 
