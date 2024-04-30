@@ -1,12 +1,11 @@
 package tracer
 
 import (
-	"encoding/base64"
 	"fmt"
+	"time"
 
 	pbacme "github.com/streamingfast/dummy-blockchain/pb/sf/acme/type/v1"
 	"github.com/streamingfast/dummy-blockchain/types"
-	"google.golang.org/protobuf/proto"
 )
 
 var _ Tracer = &FirehoseTracer{}
@@ -30,30 +29,33 @@ func (t *FirehoseTracer) OnBlockEnd(blk *types.Block, finalBlockHeader *types.Bl
 
 	header := t.activeBlock.Header
 
-	previousNum := uint64(0)
-	if header.PreviousNum != nil {
-		previousNum = *header.PreviousNum
-	}
+	// previousNum := uint64(0)
+	// if header.PreviousNum != nil {
+	// 	previousNum = *header.PreviousNum
+	// }
 
-	previousHash := ""
-	if header.PreviousHash != nil {
-		previousHash = *header.PreviousHash
-	}
+	// previousHash := ""
+	// if header.PreviousHash != nil {
+	// 	previousHash = *header.PreviousHash
+	// }
 
-	blockPayload, err := proto.Marshal(t.activeBlock)
-	if err != nil {
-		panic(fmt.Errorf("unable to marshal block: %w", err))
-	}
+	// blockPayload, err := proto.Marshal(t.activeBlock)
+	// if err != nil {
+	// 	panic(fmt.Errorf("unable to marshal block: %w", err))
+	// }
 
-	fmt.Printf("FIRE BLOCK %d %s %d %s %d %d %s\n",
-		header.Height,
-		header.Hash,
-		previousNum,
-		previousHash,
-		header.FinalNum,
-		header.Timestamp,
-		base64.StdEncoding.EncodeToString(blockPayload),
-	)
+	blockTime := time.Unix(0, int64(header.Timestamp))
+	fmt.Println(blockTime)
+
+	// fmt.Printf("FIRE BLOCK %d %s %d %s %d %d %s\n",
+	// 	header.Height,
+	// 	header.Hash,
+	// 	previousNum,
+	// 	previousHash,
+	// 	header.FinalNum,
+	// 	header.Timestamp,
+	// 	base64.StdEncoding.EncodeToString(blockPayload),
+	// )
 
 	t.activeBlock = nil
 	t.activeTrx = nil
@@ -71,7 +73,7 @@ func (t *FirehoseTracer) OnBlockStart(header *types.BlockHeader) {
 			Hash:      header.Hash,
 			FinalNum:  header.FinalNum,
 			FinalHash: header.FinalHash,
-			Timestamp: uint64(header.Timestamp.UnixNano()),
+			Timestamp: header.Timestamp.UnixNano(),
 		},
 	}
 

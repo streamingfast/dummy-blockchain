@@ -22,12 +22,7 @@ func MakeHashNonce(data interface{}, nonce *uint64) string {
 	return fmt.Sprintf("%x", shaSum)
 }
 
-func GenesisBlock(height uint64) *Block {
-	genesisTime, err := time.Parse(time.RFC3339, "2024-01-01T00:00:00Z")
-	if err != nil {
-		panic(err)
-	}
-
+func GenesisBlock(height uint64, genesisTime time.Time) *Block {
 	header := &BlockHeader{
 		Height:    height,
 		Hash:      MakeHash(height),

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/streamingfast/dummy-blockchain/tracer"
@@ -20,15 +21,16 @@ func NewNode(
 	storeDir string,
 	blockRate int,
 	genesisHeight uint64,
+	genesisTime time.Time,
 	genesisBlockBurst uint64,
 	stopHeight uint64,
 	serverAddr string,
 	tracer tracer.Tracer,
 ) *Node {
-	store := NewStore(storeDir, genesisHeight)
+	store := NewStore(storeDir, genesisHeight, genesisTime)
 
 	return &Node{
-		engine: NewEngine(genesisHeight, genesisBlockBurst, stopHeight, blockRate),
+		engine: NewEngine(genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate),
 		store:  store,
 		server: NewServer(store, serverAddr),
 		tracer: tracer,
@@ -37,7 +39,7 @@ func NewNode(
 
 func (node *Node) Initialize() error {
 	logrus.
-		WithField("genesis_height", node.store.genesisHeight).
+		WithField("genesis_height", node.store.meta.GenesisHeight).
 		Info("initializing node")
 
 	logrus.Info("initializing store")
@@ -61,7 +63,7 @@ func (node *Node) Initialize() error {
 	final := node.store.meta.FinalHeight
 	if final == 0 {
 		// We are uninitialized, so we need to create a genesis block
-		final = node.store.genesisHeight
+		final = node.store.meta.GenesisHeight
 	}
 
 	logrus.WithField("final", final).Info("loading final block")

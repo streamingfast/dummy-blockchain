@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/streamingfast/dummy-blockchain/types"
@@ -14,26 +15,33 @@ const (
 	filesPerDir = 1000
 )
 
-type Store struct {
-	rootDir       string
-	blocksDir     string
-	metaPath      string
-	currentGroup  int
-	genesisHeight uint64
-
-	meta struct {
-		FinalHeight uint64 `json:"final_height"`
-		HeadHeight  uint64 `json:"head_height"`
-	}
+type StoreMeta struct {
+	GenesisHeight    uint64 `json:"genesis_height"`
+	GenesisTimeNanos int64  `json:"genesis_time_nanos"`
+	FinalHeight      uint64 `json:"final_height"`
+	HeadHeight       uint64 `json:"head_height"`
 }
 
-func NewStore(rootDir string, genesisHeight uint64) *Store {
+type Store struct {
+	rootDir      string
+	blocksDir    string
+	metaPath     string
+	currentGroup int
+
+	meta StoreMeta
+}
+
+func NewStore(rootDir string, genesisHeight uint64, genesisTime time.Time) *Store {
 	return &Store{
-		rootDir:       rootDir,
-		blocksDir:     filepath.Join(rootDir, "blocks"),
-		metaPath:      filepath.Join(rootDir, "meta.json"),
-		currentGroup:  -1,
-		genesisHeight: genesisHeight,
+		rootDir:      rootDir,
+		blocksDir:    filepath.Join(rootDir, "blocks"),
+		metaPath:     filepath.Join(rootDir, "meta.json"),
+		currentGroup: -1,
+
+		meta: StoreMeta{
+			GenesisHeight:    genesisHeight,
+			GenesisTimeNanos: genesisTime.UnixNano(),
+		},
 	}
 }
 
@@ -89,8 +97,8 @@ func (store *Store) CurrentBlock() (*types.Block, error) {
 }
 
 func (store *Store) ReadBlock(height uint64) (*types.Block, error) {
-	if height == store.genesisHeight {
-		return types.GenesisBlock(store.genesisHeight), nil
+	if height == store.meta.GenesisHeight {
+		return types.GenesisBlock(store.meta.GenesisHeight, time.Unix(0, store.meta.GenesisTimeNanos)), nil
 	}
 
 	block := &types.Block{}

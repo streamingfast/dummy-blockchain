@@ -12,6 +12,7 @@ import (
 
 type Engine struct {
 	genesisHeight     uint64
+	genesisTime       time.Time
 	genesisBlockBurst uint64
 	stopHeight        uint64
 	blockRate         time.Duration
@@ -20,11 +21,12 @@ type Engine struct {
 	finalBlock        *types.Block
 }
 
-func NewEngine(genesisHeight, genesisBlockBurst, stopHeight uint64, rate int) Engine {
+func NewEngine(genesisHeight uint64, genesisTime time.Time, genesisBlockBurst uint64, stopHeight uint64, rate int) Engine {
 	blockRate := time.Minute / time.Duration(rate)
 
 	return Engine{
 		genesisHeight:     genesisHeight,
+		genesisTime:       genesisTime,
 		genesisBlockBurst: genesisBlockBurst,
 		stopHeight:        stopHeight,
 		blockRate:         blockRate,
@@ -80,7 +82,7 @@ func (e *Engine) Subscription() <-chan *types.Block {
 
 func (e *Engine) createBlocks() (out []*types.Block) {
 	if e.prevBlock == nil {
-		genesisBlock := types.GenesisBlock(e.genesisHeight)
+		genesisBlock := types.GenesisBlock(e.genesisHeight, e.genesisTime)
 		logrus.WithField("block", blockRef{genesisBlock.Header.Hash, e.genesisHeight}).Info("starting from genesis block height")
 		e.prevBlock = genesisBlock
 		e.finalBlock = genesisBlock
@@ -151,6 +153,7 @@ func (e *Engine) newBlock(height uint64, nonce *uint64, parent *types.Block) *ty
 			PrevHash:  &parent.Header.Hash,
 			FinalNum:  e.finalBlock.Header.Height,
 			FinalHash: e.finalBlock.Header.Hash,
+			Timestamp: e.genesisTime.Add(e.blockRate * time.Duration(height)),
 		},
 		Transactions: []types.Transaction{},
 	}
