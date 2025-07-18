@@ -1,20 +1,20 @@
 # Dummy Chain
 
 This dummy "blockchain" serves as a demonstration on how to instrument node for the
-Firehose integration. Instrumentors, "firehose" is a part responsible for data
-extraction and could be turned on with an environment variable when running the chain
-process.
+Firehose integration. It acts as a Firehose enabled node's client and works out of the box with `firehose-core`.
+
+It's used throughout our Firehose documentation (firehose.streamingfast.io) to showcase how someone can run and operator the Firehose stack without having use a chain specific client like `geth` and the like.
 
 ## Requirements
 
-- Go
+- Go 1.24+
 
 ## Getting Started
 
 To install the binary:
 
 ```bash
-go install github.com/streamingfast/dummy-blockchain@latest
+go install github.com/streamingfast/dummy-blockchain/cmd/dummy-blockchain@latest
 ```
 
 > [!NOTE]
@@ -72,7 +72,7 @@ Clone the repository:
 git clone https://github.com/streamingfast/dummy-blockchain.git
 cd dummy-blockchain
 
-go run . start
+go run ./cmd/dummy-blockchain start
 ```
 
 ## HTTP API
