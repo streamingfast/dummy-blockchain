@@ -1,0 +1,4 @@
+global:
+  binary: dummy-blockchain
+  language: golang
+  variant: application

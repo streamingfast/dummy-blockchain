@@ -1,7 +1,8 @@
 .DS_Store
-dummy-*
+dummy-blockchain
 dchain
 data
 dist
+build
 .idea
 .envrc
