@@ -13,8 +13,7 @@ COPY . ./
 # Build the binary with version information
 ARG VERSION="dev"
 ARG BINARY_NAME=dummy-blockchain
-RUN ls /app && echo "Next" && ls /app/cmd && echo "Building ${BINARY_NAME} with version ${VERSION}"
-RUN go build -v -ldflags "-X main.version=${VERSION}" -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
+RUN go build -v -ldflags "-X 'main.Version=${VERSION}'" -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
 
 FROM ghcr.io/streamingfast/firehose-core:${FIRECORE_VERSION}
 
