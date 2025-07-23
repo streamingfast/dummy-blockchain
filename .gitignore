@@ -1,6 +1,6 @@
 .DS_Store
-dummy-blockchain
-dchain
+/dummy-blockchain
+/dchain
 data
 dist
 build
