@@ -5,11 +5,7 @@ import (
 	"runtime/debug"
 )
 
-var (
-	Version = "0.0.1"
-)
-
-func VersionString() string {
+func VersionString(version string) string {
 	gitCommit := "unknown"
 	gitDate := "unknown"
 
@@ -17,7 +13,7 @@ func VersionString() string {
 		for _, setting := range info.Settings {
 			switch setting.Key {
 			case "vcs.revision":
-				gitCommit = setting.Value
+				gitCommit = setting.Value[:7]
 			case "vcs.time":
 				gitDate = setting.Value
 			}
@@ -25,7 +21,7 @@ func VersionString() string {
 	}
 
 	return fmt.Sprintf(
-		"%v (Commit=%q Commit Date=%q)",
-		Version, gitCommit, gitDate,
+		"%v (Commit: %s, Commit Date: %s)",
+		version, gitCommit, gitDate,
 	)
 }

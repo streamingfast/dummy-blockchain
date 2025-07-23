@@ -42,11 +42,11 @@ func (f *Flags) GenesisTime() (time.Time, error) {
 
 var cliOpts Flags
 
-func Main() {
+func Main(version string) {
 	root := &cobra.Command{
 		Use:     "dummy-blockchain",
 		Short:   "CLI for the Dummy Chain",
-		Version: VersionString(),
+		Version: VersionString(version),
 	}
 
 	root.SetOutput(os.Stderr)
