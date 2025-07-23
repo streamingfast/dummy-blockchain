@@ -1,15 +1,26 @@
-FROM ubuntu:20.04
+ARG FIRECORE_VERSION=v1.10.1
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get -y install -y \
-    ca-certificates libssl1.1 vim htop iotop sysstat wget \
-    dstat strace lsof curl jq tzdata && \
-    rm -rf /var/cache/apt /var/lib/apt/lists/*
+FROM golang:1.24-bookworm AS build
+WORKDIR /app
 
-RUN rm /etc/localtime && ln -snf /usr/share/zoneinfo/America/Montreal /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
 
-COPY dummy-blockchain-x86_64-unknown-linux-gnu /app/dummy-blockchain
+# Copy source code
+COPY . ./
 
-RUN chmod +x /app/dummy-blockchain
+# Build the binary with version information
+ARG VERSION="dev"
+ARG BINARY_NAME=dummy-blockchain
+RUN go build -v -ldflags "-X main.version=${VERSION}" -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
 
-ENV PATH "$PATH:/app"
+FROM ghcr.io/streamingfast/firehose-core:${FIRECORE_VERSION}
+
+ARG BINARY_NAME=dummy-blockchain
+
+# Copy the binary to the firehose-core image
+COPY --from=build /app/${BINARY_NAME} /app/${BINARY_NAME}
+
+# We use firecore entrypoint since it's the main application that people should run
+ENTRYPOINT ["/app/firecore"]
