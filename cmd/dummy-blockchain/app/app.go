@@ -24,9 +24,15 @@ type Flags struct {
 	LogLevel          string
 	StoreDir          string
 	BlockRate         int
+	BlockSizeInBytes  int
 	ServerAddr        string
 	Tracer            string
 	StopHeight        uint64
+
+	Deprecated struct {
+		GenesisHeight  uint64
+		GenesisTimeRaw string
+	}
 }
 
 var cliOpts Flags
@@ -60,10 +66,13 @@ func Main(version string) {
 func initFlags(root *cobra.Command) error {
 	flags := root.PersistentFlags()
 
+	flags.Uint64Var(&cliOpts.Deprecated.GenesisHeight, "genesis-height", 0, "Deprecated: The height of the genesis block, ignored, hard-coded to 0")
+	flags.StringVar(&cliOpts.Deprecated.GenesisTimeRaw, "genesis-time", "", "Deprecated: The time of the genesis block, ignored, hard-coded to current time")
 	flags.Uint64Var(&cliOpts.GenesisBlockBurst, "genesis-block-burst", 0, "The amount of block to produce when initially starting from genesis block")
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
+	flags.IntVar(&cliOpts.BlockSizeInBytes, "block-size", 64000, "Approximate block size (in bytes) to produce")
 	flags.Uint64Var(&cliOpts.StopHeight, "stop-height", 0, "Stop block production at this height")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 	flags.StringVar(&cliOpts.Tracer, "tracer", "", "The tracer to use, either <empty>, none or firehose")
@@ -90,13 +99,12 @@ func makeInitCommand() *cobra.Command {
 		Short:        "Initialize local blockchain state",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			warnDeprecatedFlags()
+
 			genesisTime := time.Now()
 
 			logrus.
 				WithField("dir", cliOpts.StoreDir).
-				WithField("genesis_hash", GenesisHash).
-				WithField("genesis_height", GenesisHeight).
-				WithField("genesis_time", genesisTime).
 				Info("initializing chain store")
 
 			store := core.NewStore(cliOpts.StoreDir, GenesisHash, GenesisHeight, genesisTime)
@@ -129,11 +137,17 @@ func makeStartComand() *cobra.Command {
 		Short:        "Start blockchain service",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			warnDeprecatedFlags()
+
 			if cliOpts.BlockRate < 1 {
 				return errors.New("block rate option must be greater than 1")
 			}
 
 			genesisTime := time.Now()
+
+			logrus.
+				WithField("dir", cliOpts.StoreDir).
+				Info("starting chain service")
 
 			var blockTracer tracer.Tracer
 			if cliOpts.Tracer == "firehose" {
@@ -143,6 +157,7 @@ func makeStartComand() *cobra.Command {
 			node := core.NewNode(
 				cliOpts.StoreDir,
 				cliOpts.BlockRate,
+				cliOpts.BlockSizeInBytes,
 				GenesisHash,
 				GenesisHeight,
 				genesisTime,
@@ -174,6 +189,16 @@ func makeStartComand() *cobra.Command {
 
 			return nil
 		},
+	}
+}
+
+func warnDeprecatedFlags() {
+	if cliOpts.Deprecated.GenesisHeight != 0 {
+		logrus.Warn("the --genesis-height flag is deprecated and ignored, the genesis height is hard-coded to 0")
+	}
+
+	if cliOpts.Deprecated.GenesisTimeRaw != "" {
+		logrus.Warn("the --genesis-time flag is deprecated and ignored, the genesis time is hard-coded to current time")
 	}
 }
 

@@ -61,6 +61,14 @@ func (store *Store) Initialize() error {
 		return err
 	}
 
+	logrus.WithField("dir", store.rootDir).
+		WithField("genesis_hash", store.meta.GenesisHash).
+		WithField("genesis_height", store.meta.GenesisHeight).
+		WithField("genesis_time", time.Unix(0, store.meta.GenesisTimeNanos)).
+		WithField("final_height", store.meta.FinalHeight).
+		WithField("head_height", store.meta.HeadHeight).
+		Info("stored initialized")
+
 	return nil
 }
 

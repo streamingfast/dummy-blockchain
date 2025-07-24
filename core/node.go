@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/sirupsen/logrus"
 	"github.com/streamingfast/dummy-blockchain/tracer"
 	"github.com/streamingfast/dummy-blockchain/types"
@@ -20,6 +21,7 @@ type Node struct {
 func NewNode(
 	storeDir string,
 	blockRate int,
+	blockSizeInBytes int,
 	genesisHash string,
 	genesisHeight uint64,
 	genesisTime time.Time,
@@ -31,7 +33,7 @@ func NewNode(
 	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
 
 	return &Node{
-		engine: NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate),
+		engine: NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes),
 		store:  store,
 		server: NewServer(store, serverAddr),
 		tracer: tracer,
@@ -39,9 +41,7 @@ func NewNode(
 }
 
 func (node *Node) Initialize() error {
-	logrus.
-		WithField("genesis_height", node.store.meta.GenesisHeight).
-		Info("initializing node")
+	logrus.Info("initializing node")
 
 	logrus.Info("initializing store")
 	if err := node.store.Initialize(); err != nil {
@@ -134,10 +134,20 @@ func (node *Node) Start(ctx context.Context) error {
 }
 
 func (node *Node) processBlock(block *types.Block) error {
+	eventCount := 0
+	for _, tx := range block.Transactions {
+		eventCount += len(tx.Events)
+	}
+
 	logrus.
 		WithField("block", blockRef{block.Header.Hash, block.Header.Height}).
 		WithField("parent_block", blockRef{valueOr(block.Header.PrevHash, ""), valueOr(block.Header.PrevNum, 0)}).
 		WithField("final_block", blockRef{block.Header.FinalHash, block.Header.FinalNum}).
+		WithField("stats", fmt.Sprintf("Txs: %d, Events: %d, Size: %s",
+			len(block.Transactions),
+			eventCount,
+			humanize.Bytes(uint64(block.ApproximatedSize())),
+		)).
 		Info("processing block")
 
 	if err := node.store.WriteBlock(block); err != nil {

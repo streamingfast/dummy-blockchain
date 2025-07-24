@@ -16,13 +16,14 @@ type Engine struct {
 	genesisTime       time.Time
 	genesisBlockBurst uint64
 	stopHeight        uint64
+	blockSizeInBytes  int
 	blockRate         time.Duration
 	blockChan         chan *types.Block
 	prevBlock         *types.Block
 	finalBlock        *types.Block
 }
 
-func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, genesisBlockBurst uint64, stopHeight uint64, rate int) Engine {
+func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, genesisBlockBurst uint64, stopHeight uint64, rate int, blockSizeInBytes int) Engine {
 	blockRate := time.Minute / time.Duration(rate)
 
 	return Engine{
@@ -32,6 +33,7 @@ func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, 
 		genesisBlockBurst: genesisBlockBurst,
 		stopHeight:        stopHeight,
 		blockRate:         blockRate,
+		blockSizeInBytes:  blockSizeInBytes,
 		blockChan:         make(chan *types.Block),
 	}
 }
@@ -119,9 +121,10 @@ func (e *Engine) createBlocks() (out []*types.Block) {
 
 	block := e.newBlock(heightToProduce, nil, e.prevBlock)
 
-	trxCount := min(heightToProduce%10, 500)
-	for i := uint64(0); i < trxCount; i++ {
-		tx := types.Transaction{
+	for size := block.ApproximatedSize(); size < e.blockSizeInBytes; size = block.ApproximatedSize() {
+		i := len(block.Transactions)
+
+		block.Transactions = append(block.Transactions, types.Transaction{
 			Type:     "transfer",
 			Hash:     types.MakeHash(fmt.Sprintf("%v-%v", heightToProduce, i)),
 			Sender:   "0xDEADBEEF",
@@ -130,9 +133,7 @@ func (e *Engine) createBlocks() (out []*types.Block) {
 			Fee:      big.NewInt(10000),
 			Success:  true,
 			Events:   e.generateEvents(heightToProduce),
-		}
-
-		block.Transactions = append(block.Transactions, tx)
+		})
 	}
 
 	out = append(out, block)

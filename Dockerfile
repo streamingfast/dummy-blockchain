@@ -11,9 +11,9 @@ RUN go mod download
 COPY . ./
 
 # Build the binary with version information
-ARG VERSION="dev"
+ARG VERSION="edge"
 ARG BINARY_NAME=dummy-blockchain
-RUN go build -v -ldflags "-X 'main.Version=${VERSION}'" -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
+RUN go build -v -ldflags "-X 'main.version=${VERSION}'" -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
 
 FROM ghcr.io/streamingfast/firehose-core:${FIRECORE_VERSION}
 
@@ -22,5 +22,5 @@ ARG BINARY_NAME=dummy-blockchain
 # Copy the binary to the firehose-core image
 COPY --from=build /app/${BINARY_NAME} /app/${BINARY_NAME}
 
-# We use firecore entrypoint since it's the main application that people should run
+# We use firecore entrypoint since it's the main application that people should run to setup Firehose stack
 ENTRYPOINT ["/app/firecore"]
