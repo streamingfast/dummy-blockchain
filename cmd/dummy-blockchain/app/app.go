@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,9 +14,12 @@ import (
 	"github.com/streamingfast/dummy-blockchain/tracer"
 )
 
+const (
+	GenesisHash   string = "0x0000000000000000000000000000000000000000000000000000000000000000"
+	GenesisHeight uint64 = 0
+)
+
 type Flags struct {
-	GenesisHeight     uint64
-	GenesisTimeRaw    string
 	GenesisBlockBurst uint64
 	LogLevel          string
 	StoreDir          string
@@ -25,19 +27,6 @@ type Flags struct {
 	ServerAddr        string
 	Tracer            string
 	StopHeight        uint64
-}
-
-func (f *Flags) GenesisTime() (time.Time, error) {
-	if f.GenesisTimeRaw == "" {
-		return time.Now(), nil
-	}
-
-	genesisTime, err := time.Parse(time.RFC3339, f.GenesisTimeRaw)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("parse %q: %w", f.GenesisTimeRaw, err)
-	}
-
-	return genesisTime, nil
 }
 
 var cliOpts Flags
@@ -71,8 +60,6 @@ func Main(version string) {
 func initFlags(root *cobra.Command) error {
 	flags := root.PersistentFlags()
 
-	flags.Uint64Var(&cliOpts.GenesisHeight, "genesis-height", 1, "Blockchain genesis height")
-	flags.StringVar(&cliOpts.GenesisTimeRaw, "genesis-time", "", "Blockchain genesis time in RFC3339 time format, leave empty for current time")
 	flags.Uint64Var(&cliOpts.GenesisBlockBurst, "genesis-block-burst", 0, "The amount of block to produce when initially starting from genesis block")
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
@@ -103,18 +90,16 @@ func makeInitCommand() *cobra.Command {
 		Short:        "Initialize local blockchain state",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			genesisTime, err := cliOpts.GenesisTime()
-			if err != nil {
-				return fmt.Errorf("get genesis time: %w", err)
-			}
+			genesisTime := time.Now()
 
 			logrus.
 				WithField("dir", cliOpts.StoreDir).
-				WithField("genesis_height", cliOpts.GenesisHeight).
+				WithField("genesis_hash", GenesisHash).
+				WithField("genesis_height", GenesisHeight).
 				WithField("genesis_time", genesisTime).
 				Info("initializing chain store")
 
-			store := core.NewStore(cliOpts.StoreDir, cliOpts.GenesisHeight, genesisTime)
+			store := core.NewStore(cliOpts.StoreDir, GenesisHash, GenesisHeight, genesisTime)
 			return store.Initialize()
 		},
 	}
@@ -148,10 +133,7 @@ func makeStartComand() *cobra.Command {
 				return errors.New("block rate option must be greater than 1")
 			}
 
-			genesisTime, err := cliOpts.GenesisTime()
-			if err != nil {
-				return fmt.Errorf("get genesis time: %w", err)
-			}
+			genesisTime := time.Now()
 
 			var blockTracer tracer.Tracer
 			if cliOpts.Tracer == "firehose" {
@@ -161,7 +143,8 @@ func makeStartComand() *cobra.Command {
 			node := core.NewNode(
 				cliOpts.StoreDir,
 				cliOpts.BlockRate,
-				cliOpts.GenesisHeight,
+				GenesisHash,
+				GenesisHeight,
 				genesisTime,
 				cliOpts.GenesisBlockBurst,
 				cliOpts.StopHeight,

@@ -1,8 +1,8 @@
 .DS_Store
 /dummy-blockchain
 /dchain
-data
-dist
-build
+/data
+/dist
+/build
 .idea
 .envrc

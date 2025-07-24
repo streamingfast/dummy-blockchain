@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-func MakeHash(data interface{}) string {
+func MakeHash(data any) string {
 	return MakeHashNonce(data, nil)
 }
 
-func MakeHashNonce(data interface{}, nonce *uint64) string {
-	content := []byte(fmt.Sprintf("%v", data))
+func MakeHashNonce(data any, nonce *uint64) string {
+	content := fmt.Appendf(nil, "%v", data)
 	if nonce != nil {
 		content = binary.LittleEndian.AppendUint64(content, *nonce)
 	}
@@ -22,12 +22,12 @@ func MakeHashNonce(data interface{}, nonce *uint64) string {
 	return fmt.Sprintf("%x", shaSum)
 }
 
-func GenesisBlock(height uint64, genesisTime time.Time) *Block {
+func GenesisBlock(hash string, height uint64, genesisTime time.Time) *Block {
 	header := &BlockHeader{
 		Height:    height,
-		Hash:      MakeHash(height),
+		Hash:      hash,
 		FinalNum:  height,
-		FinalHash: MakeHash(height),
+		FinalHash: hash,
 		Timestamp: genesisTime,
 	}
 

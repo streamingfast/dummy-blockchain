@@ -20,6 +20,7 @@ type Node struct {
 func NewNode(
 	storeDir string,
 	blockRate int,
+	genesisHash string,
 	genesisHeight uint64,
 	genesisTime time.Time,
 	genesisBlockBurst uint64,
@@ -27,10 +28,10 @@ func NewNode(
 	serverAddr string,
 	tracer tracer.Tracer,
 ) *Node {
-	store := NewStore(storeDir, genesisHeight, genesisTime)
+	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
 
 	return &Node{
-		engine: NewEngine(genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate),
+		engine: NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate),
 		store:  store,
 		server: NewServer(store, serverAddr),
 		tracer: tracer,

@@ -16,6 +16,7 @@ const (
 )
 
 type StoreMeta struct {
+	GenesisHash      string `json:"genesis_hash"`
 	GenesisHeight    uint64 `json:"genesis_height"`
 	GenesisTimeNanos int64  `json:"genesis_time_nanos"`
 	FinalHeight      uint64 `json:"final_height"`
@@ -31,7 +32,7 @@ type Store struct {
 	meta StoreMeta
 }
 
-func NewStore(rootDir string, genesisHeight uint64, genesisTime time.Time) *Store {
+func NewStore(rootDir string, genesisHash string, genesisHeight uint64, genesisTime time.Time) *Store {
 	return &Store{
 		rootDir:      rootDir,
 		blocksDir:    filepath.Join(rootDir, "blocks"),
@@ -39,6 +40,7 @@ func NewStore(rootDir string, genesisHeight uint64, genesisTime time.Time) *Stor
 		currentGroup: -1,
 
 		meta: StoreMeta{
+			GenesisHash:      genesisHash,
 			GenesisHeight:    genesisHeight,
 			GenesisTimeNanos: genesisTime.UnixNano(),
 		},
@@ -98,7 +100,7 @@ func (store *Store) CurrentBlock() (*types.Block, error) {
 
 func (store *Store) ReadBlock(height uint64) (*types.Block, error) {
 	if height == store.meta.GenesisHeight {
-		return types.GenesisBlock(store.meta.GenesisHeight, time.Unix(0, store.meta.GenesisTimeNanos)), nil
+		return types.GenesisBlock(store.meta.GenesisHash, store.meta.GenesisHeight, time.Unix(0, store.meta.GenesisTimeNanos)), nil
 	}
 
 	block := &types.Block{}
