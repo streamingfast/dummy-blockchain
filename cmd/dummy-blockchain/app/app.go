@@ -50,15 +50,16 @@ func Main(version string) {
 		logrus.Fatal(err)
 	}
 
-	if err := initLogger(); err != nil {
-		logrus.Fatal(err)
-	}
 
 	root.AddCommand(
 		makeInitCommand(),
 		makeResetCommand(),
 		makeStartComand(),
 	)
+
+	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return initLogger()
+	}
 
 	root.Execute()
 }

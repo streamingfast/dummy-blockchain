@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.7.1
+
+- Fixed `--log-level` not being picked up correctly.
+
 ## 1.7.0
 
 - Added `--block-size` (in bytes) controlling approximatively how big blocks get.
