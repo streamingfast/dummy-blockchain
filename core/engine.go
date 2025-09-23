@@ -19,6 +19,7 @@ type Engine struct {
 	blockSizeInBytes  int
 	blockRate         time.Duration
 	blockChan         chan *types.Block
+	signalChan        chan *types.Signal
 	prevBlock         *types.Block
 	finalBlock        *types.Block
 }
@@ -35,6 +36,7 @@ func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, 
 		blockRate:         blockRate,
 		blockSizeInBytes:  blockSizeInBytes,
 		blockChan:         make(chan *types.Block),
+		signalChan:        make(chan *types.Signal),
 	}
 }
 
@@ -49,7 +51,7 @@ func (e *Engine) Initialize(prevBlock *types.Block, finalBlock *types.Block) err
 	return nil
 }
 
-func (e *Engine) StartBlockProduction(ctx context.Context) {
+func (e *Engine) StartBlockProduction(ctx context.Context, withSignal bool) {
 	ticker := time.NewTicker(e.blockRate)
 
 	logrus.WithField("rate", e.blockRate).Info("starting block producer")
@@ -60,11 +62,23 @@ func (e *Engine) StartBlockProduction(ctx context.Context) {
 		}
 	}
 
+	var lastBlock *types.Block
+	var lastSignal *types.Signal
+
+	signalTicker := time.NewTicker(e.blockRate)
+	if withSignal {
+		<-time.After(e.blockRate / 2) // offset by half duration
+		signalTicker.Reset(e.blockRate)
+	} else {
+		signalTicker.Stop()
+	}
+
 	for {
 		select {
 		case <-ticker.C:
 			for _, block := range e.createBlocks() {
 				e.blockChan <- block
+				lastBlock = block
 
 				if e.stopHeight > 0 && block.Header.Height >= e.stopHeight {
 					logrus.Info("reached stop height")
@@ -72,6 +86,23 @@ func (e *Engine) StartBlockProduction(ctx context.Context) {
 					return
 				}
 			}
+		case <-signalTicker.C:
+			if !withSignal {
+				continue // just ignore if a signal ticker comes in, but it actually should not be called because of the Stop(), unless there is a crazy race condtition
+			}
+			if lastBlock != nil {
+				if lastSignal != nil && lastSignal.BlockID == lastBlock.Header.Hash {
+					continue // don't send duplicate signal
+				}
+				sig := &types.Signal{
+					BlockID:         lastBlock.Header.Hash,
+					BlockNumber:     lastBlock.Header.Height,
+					CommitmentLevel: 10,
+				}
+				e.signalChan <- sig
+				lastSignal = sig
+			}
+
 		case <-ctx.Done():
 			logrus.Info("stopping block producer")
 			close(e.blockChan)
@@ -80,8 +111,12 @@ func (e *Engine) StartBlockProduction(ctx context.Context) {
 	}
 }
 
-func (e *Engine) Subscription() <-chan *types.Block {
+func (e *Engine) SubscribeBlocks() <-chan *types.Block {
 	return e.blockChan
+}
+
+func (e *Engine) SubscribeSignals() <-chan *types.Signal {
+	return e.signalChan
 }
 
 func (e *Engine) createBlocks() (out []*types.Block) {

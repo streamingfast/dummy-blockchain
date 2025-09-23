@@ -12,10 +12,11 @@ import (
 )
 
 type Node struct {
-	engine Engine
-	server Server
-	store  *Store
-	tracer tracer.Tracer
+	engine     Engine
+	server     Server
+	store      *Store
+	tracer     tracer.Tracer
+	withSignal bool
 }
 
 func NewNode(
@@ -29,14 +30,16 @@ func NewNode(
 	stopHeight uint64,
 	serverAddr string,
 	tracer tracer.Tracer,
+	withSignal bool,
 ) *Node {
 	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
 
 	return &Node{
-		engine: NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes),
-		store:  store,
-		server: NewServer(store, serverAddr),
-		tracer: tracer,
+		engine:     NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes),
+		store:      store,
+		server:     NewServer(store, serverAddr),
+		tracer:     tracer,
+		withSignal: withSignal,
 	}
 }
 
@@ -97,11 +100,11 @@ func (node *Node) Initialize() error {
 
 func (node *Node) Start(ctx context.Context) error {
 	go node.server.Start() // TODO: handle error here
-	go node.engine.StartBlockProduction(ctx)
+	go node.engine.StartBlockProduction(ctx, node.withSignal)
 
 	for {
 		select {
-		case block, ok := <-node.engine.Subscription():
+		case block, ok := <-node.engine.SubscribeBlocks():
 			if !ok {
 				return nil
 			}
@@ -125,6 +128,15 @@ func (node *Node) Start(ctx context.Context) error {
 				}
 
 				tracer.OnBlockEnd(block, node.engine.finalBlock.Header)
+			}
+
+		case sig, ok := <-node.engine.SubscribeSignals():
+			if !ok {
+				return nil
+			}
+
+			if tracer := node.tracer; tracer != nil {
+				tracer.OnCommitmentSignal(sig)
 			}
 
 		case <-ctx.Done():

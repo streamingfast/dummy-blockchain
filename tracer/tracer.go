@@ -9,6 +9,8 @@ type Tracer interface {
 
 	OnBlockStart(header *types.BlockHeader)
 
+	OnCommitmentSignal(sig *types.Signal)
+
 	OnTrxStart(trx *types.Transaction)
 
 	OnTrxEvent(trxHash string, event *types.Event)

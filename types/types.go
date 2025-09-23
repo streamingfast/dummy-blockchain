@@ -52,6 +52,12 @@ type Block struct {
 	Transactions []Transaction `json:"transactions"`
 }
 
+type Signal struct {
+	BlockID         string
+	BlockNumber     uint64
+	CommitmentLevel int32
+}
+
 // ApproximatedSize computes an approximation of how big the block would be
 // once converted into a Protobuf Block model
 func (b *Block) ApproximatedSize() int {

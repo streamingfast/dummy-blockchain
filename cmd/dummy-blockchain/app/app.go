@@ -26,6 +26,7 @@ type Flags struct {
 	BlockRate         int
 	BlockSizeInBytes  int
 	ServerAddr        string
+	WithSignal        bool
 	Tracer            string
 	StopHeight        uint64
 
@@ -49,7 +50,6 @@ func Main(version string) {
 	if err := initFlags(root); err != nil {
 		logrus.Fatal(err)
 	}
-
 
 	root.AddCommand(
 		makeInitCommand(),
@@ -77,6 +77,7 @@ func initFlags(root *cobra.Command) error {
 	flags.Uint64Var(&cliOpts.StopHeight, "stop-height", 0, "Stop block production at this height")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 	flags.StringVar(&cliOpts.Tracer, "tracer", "", "The tracer to use, either <empty>, none or firehose")
+	flags.BoolVar(&cliOpts.WithSignal, "with-signal", false, "whether we produce BlockCommitmentLevel signals on top of blocks")
 
 	return nil
 }
@@ -166,6 +167,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.StopHeight,
 				cliOpts.ServerAddr,
 				blockTracer,
+				cliOpts.WithSignal,
 			)
 
 			if err := node.Initialize(); err != nil {

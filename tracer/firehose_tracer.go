@@ -75,10 +75,18 @@ func (t *FirehoseTracer) OnBlockStart(header *types.BlockHeader) {
 		},
 	}
 
-	if header.PrevHash != nil {
+	if header.PrevHash != nil && header.PrevNum != nil {
 		t.activeBlock.Header.PreviousNum = header.PrevNum
 		t.activeBlock.Header.PreviousHash = header.PrevHash
 	}
+}
+
+func (t *FirehoseTracer) OnCommitmentSignal(sig *types.Signal) {
+	fmt.Printf("FIRE SIGNAL 1 %d %s %d\n",
+		sig.BlockNumber,
+		sig.BlockID,
+		sig.CommitmentLevel,
+	)
 }
 
 // OnTrxStart implements Tracer.
