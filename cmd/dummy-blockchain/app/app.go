@@ -27,6 +27,8 @@ type Flags struct {
 	BlockSizeInBytes  int
 	ServerAddr        string
 	WithSignal        bool
+	WithSkippedBlocks bool
+	WithReorgs        bool
 	Tracer            string
 	StopHeight        uint64
 
@@ -78,6 +80,8 @@ func initFlags(root *cobra.Command) error {
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 	flags.StringVar(&cliOpts.Tracer, "tracer", "", "The tracer to use, either <empty>, none or firehose")
 	flags.BoolVar(&cliOpts.WithSignal, "with-signal", false, "whether we produce BlockCommitmentLevel signals on top of blocks")
+	flags.BoolVar(&cliOpts.WithSkippedBlocks, "with-skipped-blocks", true, "whether skip a block number every 13 slots")
+	flags.BoolVar(&cliOpts.WithReorgs, "with-reorgs", true, "whether we produce reorgs every 17 slots")
 
 	return nil
 }
@@ -168,6 +172,8 @@ func makeStartComand() *cobra.Command {
 				cliOpts.ServerAddr,
 				blockTracer,
 				cliOpts.WithSignal,
+				cliOpts.WithSkippedBlocks,
+				cliOpts.WithReorgs,
 			)
 
 			if err := node.Initialize(); err != nil {

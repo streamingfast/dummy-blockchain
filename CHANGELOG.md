@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.7.2
+
+- Added `--with-skipped-blocks` flag to control behavior of skipping blocks that are multiples of 13.
+- Added `--with-reorgs` flag to control behavior of producing 2 block reorg sequences every 17 blocks.
+
 ## 1.7.1
 
 - Fixed `--log-level` not being picked up correctly.

@@ -31,11 +31,13 @@ func NewNode(
 	serverAddr string,
 	tracer tracer.Tracer,
 	withSignal bool,
+	withSkippedBlocks bool,
+	withReorgs bool,
 ) *Node {
 	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
 
 	return &Node{
-		engine:     NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes),
+		engine:     NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes, withSkippedBlocks, withReorgs),
 		store:      store,
 		server:     NewServer(store, serverAddr),
 		tracer:     tracer,

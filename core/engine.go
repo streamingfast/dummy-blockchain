@@ -22,9 +22,11 @@ type Engine struct {
 	signalChan        chan *types.Signal
 	prevBlock         *types.Block
 	finalBlock        *types.Block
+	withSkippedBlocks bool
+	withReorgs        bool
 }
 
-func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, genesisBlockBurst uint64, stopHeight uint64, rate int, blockSizeInBytes int) Engine {
+func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, genesisBlockBurst uint64, stopHeight uint64, rate int, blockSizeInBytes int, withSkippedBlocks bool, withReorgs bool) Engine {
 	blockRate := time.Minute / time.Duration(rate)
 
 	return Engine{
@@ -37,6 +39,8 @@ func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, 
 		blockSizeInBytes:  blockSizeInBytes,
 		blockChan:         make(chan *types.Block),
 		signalChan:        make(chan *types.Signal),
+		withSkippedBlocks: withSkippedBlocks,
+		withReorgs:        withReorgs,
 	}
 }
 
@@ -136,12 +140,12 @@ func (e *Engine) createBlocks() (out []*types.Block) {
 	}
 
 	heightToProduce := e.prevBlock.Header.Height + 1
-	if heightToProduce%13 == 0 {
+	if e.withSkippedBlocks && heightToProduce%13 == 0 {
 		heightToProduce += 1
 		logrus.Info(fmt.Sprintf("skipping block #%d that is a multiple of 13, producing %d instead", heightToProduce-1, heightToProduce))
 	}
 
-	if heightToProduce%17 == 0 {
+	if e.withReorgs && heightToProduce%17 == 0 {
 		if heightToProduce%2 == 0 {
 			logrus.Info("producing 2 block fork sequence")
 			firstFork := e.newBlock(heightToProduce, ptr(uint64(1)), e.prevBlock)
