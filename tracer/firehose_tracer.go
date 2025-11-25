@@ -12,12 +12,17 @@ import (
 var _ Tracer = &FirehoseTracer{}
 
 type FirehoseTracer struct {
-	activeBlock *pbacme.Block
-	activeTrx   *pbacme.Transaction
+	activeBlock           *pbacme.Block
+	activeTrx             *pbacme.Transaction
+	withFlashBlocks       bool
+	activeBlockFlashIndex int32
 }
 
 // Initialize implements Tracer.
-func (*FirehoseTracer) Initialize(version string) error {
+func (t *FirehoseTracer) Initialize(version string) error {
+	if version == "3.1" {
+		t.withFlashBlocks = true
+	}
 	fmt.Printf("FIRE INIT %s %s\n", version, new(pbacme.Block).ProtoReflect().Descriptor().FullName())
 	return nil
 }
@@ -45,17 +50,17 @@ func (t *FirehoseTracer) OnBlockEnd(blk *types.Block, finalBlockHeader *types.Bl
 		panic(fmt.Errorf("unable to marshal block: %w", err))
 	}
 
-	printBlock(header, previousNum, previousHash, base64.StdEncoding.EncodeToString(blockPayload), nil)
+	t.printBlock(header, previousNum, previousHash, base64.StdEncoding.EncodeToString(blockPayload), 0)
 
 	t.activeBlock = nil
 	t.activeTrx = nil
 }
 
-func printBlock(header *pbacme.BlockHeader, prevNum uint64, prevHash string, blockPayload string, flashBlockIndex *int32) {
-	if flashBlockIndex != nil {
-		fmt.Printf("FIRE BLOCK %d %d, %s %d %s %d %d %s\n",
+func (t *FirehoseTracer) printBlock(header *pbacme.BlockHeader, prevNum uint64, prevHash string, blockPayload string, flashBlockIndex int32) {
+	if t.withFlashBlocks {
+		fmt.Printf("FIRE BLOCK %d %d %s %d %s %d %d %s\n",
 			header.Height,
-			*flashBlockIndex,
+			flashBlockIndex,
 			header.Hash,
 			prevNum,
 			prevHash,
@@ -98,8 +103,7 @@ func (t *FirehoseTracer) OnFlashBlockEnd(blk *types.Block, finalBlockHeader *typ
 	if err != nil {
 		panic(fmt.Errorf("unable to marshal block: %w", err))
 	}
-
-	printBlock(header, previousNum, previousHash, base64.StdEncoding.EncodeToString(blockPayload), &flashBlockIndex)
+	t.printBlock(header, previousNum, previousHash, base64.StdEncoding.EncodeToString(blockPayload), flashBlockIndex)
 
 	t.activeBlock = nil
 	t.activeTrx = nil
