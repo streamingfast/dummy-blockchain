@@ -5,9 +5,11 @@ import (
 )
 
 type Tracer interface {
-	Initialize() error
+	Initialize(version string) error
 
 	OnBlockStart(header *types.BlockHeader)
+
+	OnFlashBlockStart(header *types.BlockHeader)
 
 	OnCommitmentSignal(sig *types.Signal)
 
@@ -18,4 +20,6 @@ type Tracer interface {
 	OnTrxEnd(trx *types.Transaction)
 
 	OnBlockEnd(blk *types.Block, finalBlockHeader *types.BlockHeader)
+
+	OnFlashBlockEnd(blk *types.Block, finalBlockHeader *types.BlockHeader, idx int32)
 }

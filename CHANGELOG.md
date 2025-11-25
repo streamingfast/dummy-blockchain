@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.7.3
+
+- Added `--with-flash-blocks` flag to send flash blocks (4 per block)
+
 ## 1.7.2
 
 - Added `--with-skipped-blocks` flag to control behavior of skipping blocks that are multiples of 13.

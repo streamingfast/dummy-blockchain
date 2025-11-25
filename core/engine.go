@@ -19,6 +19,7 @@ type Engine struct {
 	blockSizeInBytes  int
 	blockRate         time.Duration
 	blockChan         chan *types.Block
+	flashBlockChan    chan *types.FlashBlock
 	signalChan        chan *types.Signal
 	prevBlock         *types.Block
 	finalBlock        *types.Block
@@ -39,6 +40,7 @@ func NewEngine(genesisHash string, genesisHeight uint64, genesisTime time.Time, 
 		blockSizeInBytes:  blockSizeInBytes,
 		blockChan:         make(chan *types.Block),
 		signalChan:        make(chan *types.Signal),
+		flashBlockChan:    make(chan *types.FlashBlock),
 		withSkippedBlocks: withSkippedBlocks,
 		withReorgs:        withReorgs,
 	}
@@ -55,7 +57,7 @@ func (e *Engine) Initialize(prevBlock *types.Block, finalBlock *types.Block) err
 	return nil
 }
 
-func (e *Engine) StartBlockProduction(ctx context.Context, withSignal bool) {
+func (e *Engine) StartBlockProduction(ctx context.Context, withSignal, withFlashBlocks bool) {
 	ticker := time.NewTicker(e.blockRate)
 
 	logrus.WithField("rate", e.blockRate).Info("starting block producer")
@@ -68,6 +70,8 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withSignal bool) {
 
 	var lastBlock *types.Block
 	var lastSignal *types.Signal
+	var lastFlashBlockNum uint64
+	var lastFlashBlockIndex uint64
 
 	signalTicker := time.NewTicker(e.blockRate)
 	if withSignal {
@@ -75,6 +79,12 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withSignal bool) {
 		signalTicker.Reset(e.blockRate)
 	} else {
 		signalTicker.Stop()
+	}
+
+	flashRate := e.blockRate / 5 // we use 4 slots out of 5
+	flashBlockTicker := time.NewTicker(flashRate)
+	if !withFlashBlocks {
+		flashBlockTicker.Stop()
 	}
 
 	for {
@@ -107,6 +117,32 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withSignal bool) {
 				lastSignal = sig
 			}
 
+		case <-flashBlockTicker.C:
+			if !withFlashBlocks {
+				continue // just ignore if a flashblock ticker comes in, but it actually should not be called because of the Stop(), unless there is a crazy race condtition
+			}
+			if lastBlock == nil {
+				continue
+			}
+
+			num := lastBlock.Header.Height + 1
+			if num != lastFlashBlockNum {
+				lastFlashBlockIndex = 0
+				lastFlashBlockNum = num
+				continue
+			}
+
+			idx := lastFlashBlockIndex + 1
+			flashBlock := e.newBlock(num, &idx, e.prevBlock)
+			e.addTransactions(flashBlock, int(idx*uint64(e.blockSizeInBytes)/4))
+			e.flashBlockChan <- &types.FlashBlock{
+				Block: flashBlock,
+				Index: int32(idx),
+			}
+
+			lastFlashBlockIndex = idx
+			lastFlashBlockNum = num
+
 		case <-ctx.Done():
 			logrus.Info("stopping block producer")
 			close(e.blockChan)
@@ -121,6 +157,10 @@ func (e *Engine) SubscribeBlocks() <-chan *types.Block {
 
 func (e *Engine) SubscribeSignals() <-chan *types.Signal {
 	return e.signalChan
+}
+
+func (e *Engine) SubscribeFlashBlocks() <-chan *types.FlashBlock {
+	return e.flashBlockChan
 }
 
 func (e *Engine) createBlocks() (out []*types.Block) {
@@ -160,20 +200,7 @@ func (e *Engine) createBlocks() (out []*types.Block) {
 
 	block := e.newBlock(heightToProduce, nil, e.prevBlock)
 
-	for size := block.ApproximatedSize(); size < e.blockSizeInBytes; size = block.ApproximatedSize() {
-		i := len(block.Transactions)
-
-		block.Transactions = append(block.Transactions, types.Transaction{
-			Type:     "transfer",
-			Hash:     types.MakeHash(fmt.Sprintf("%v-%v", heightToProduce, i)),
-			Sender:   "0xDEADBEEF",
-			Receiver: "0xBAAAAAAD",
-			Amount:   big.NewInt(int64(i * 1000000000)),
-			Fee:      big.NewInt(10000),
-			Success:  true,
-			Events:   e.generateEvents(heightToProduce),
-		})
-	}
+	e.addTransactions(block, e.blockSizeInBytes)
 
 	out = append(out, block)
 
@@ -184,6 +211,24 @@ func (e *Engine) createBlocks() (out []*types.Block) {
 	}
 
 	return
+}
+
+func (e *Engine) addTransactions(block *types.Block, sizeInBytes int) {
+
+	for size := block.ApproximatedSize(); size < sizeInBytes; size = block.ApproximatedSize() {
+		i := len(block.Transactions)
+
+		block.Transactions = append(block.Transactions, types.Transaction{
+			Type:     "transfer",
+			Hash:     types.MakeHash(fmt.Sprintf("%v-%v", block.Header.Height, i)),
+			Sender:   "0xDEADBEEF",
+			Receiver: "0xBAAAAAAD",
+			Amount:   big.NewInt(int64(i * 1000000000)),
+			Fee:      big.NewInt(10000),
+			Success:  true,
+			Events:   e.generateEvents(block.Header.Height),
+		})
+	}
 }
 
 func (e *Engine) newBlock(height uint64, nonce *uint64, parent *types.Block) *types.Block {

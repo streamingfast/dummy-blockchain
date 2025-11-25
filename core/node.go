@@ -12,11 +12,12 @@ import (
 )
 
 type Node struct {
-	engine     Engine
-	server     Server
-	store      *Store
-	tracer     tracer.Tracer
-	withSignal bool
+	engine          Engine
+	server          Server
+	store           *Store
+	tracer          tracer.Tracer
+	withSignal      bool
+	withFlashBlocks bool
 }
 
 func NewNode(
@@ -33,15 +34,17 @@ func NewNode(
 	withSignal bool,
 	withSkippedBlocks bool,
 	withReorgs bool,
+	withFlashBlocks bool,
 ) *Node {
 	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
 
 	return &Node{
-		engine:     NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes, withSkippedBlocks, withReorgs),
-		store:      store,
-		server:     NewServer(store, serverAddr),
-		tracer:     tracer,
-		withSignal: withSignal,
+		engine:          NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes, withSkippedBlocks, withReorgs),
+		store:           store,
+		server:          NewServer(store, serverAddr),
+		tracer:          tracer,
+		withSignal:      withSignal,
+		withFlashBlocks: withFlashBlocks,
 	}
 }
 
@@ -89,9 +92,13 @@ func (node *Node) Initialize() error {
 		return err
 	}
 
+	version := "3.0"
+	if node.withFlashBlocks {
+		version = "3.1"
+	}
 	if tracer := node.tracer; tracer != nil {
 		logrus.Info("initializing tracer")
-		if err := node.tracer.Initialize(); err != nil {
+		if err := node.tracer.Initialize(version); err != nil {
 			logrus.WithError(err).Error("tracer initialization failed")
 			return err
 		}
@@ -102,7 +109,7 @@ func (node *Node) Initialize() error {
 
 func (node *Node) Start(ctx context.Context) error {
 	go node.server.Start() // TODO: handle error here
-	go node.engine.StartBlockProduction(ctx, node.withSignal)
+	go node.engine.StartBlockProduction(ctx, node.withSignal, node.withFlashBlocks)
 
 	for {
 		select {
@@ -130,6 +137,32 @@ func (node *Node) Start(ctx context.Context) error {
 				}
 
 				tracer.OnBlockEnd(block, node.engine.finalBlock.Header)
+			}
+
+		case fb, ok := <-node.engine.SubscribeFlashBlocks():
+			if !ok {
+				return nil
+			}
+			if err := node.processFlashBlock(fb); err != nil {
+				logrus.WithError(err).Error("failed to process block")
+				return err
+			}
+
+			if tracer := node.tracer; tracer != nil {
+				tracer.OnFlashBlockStart(fb.Block.Header)
+				for _, trx := range fb.Block.Transactions {
+					tracer.OnTrxStart(&trx)
+
+					func() {
+						defer tracer.OnTrxEnd(&trx)
+
+						for _, event := range trx.Events {
+							tracer.OnTrxEvent(trx.Hash, &event)
+						}
+					}()
+				}
+
+				tracer.OnFlashBlockEnd(fb.Block, node.engine.finalBlock.Header, fb.Index)
 			}
 
 		case sig, ok := <-node.engine.SubscribeSignals():
@@ -163,6 +196,32 @@ func (node *Node) processBlock(block *types.Block) error {
 			humanize.Bytes(uint64(block.ApproximatedSize())),
 		)).
 		Info("processing block")
+
+	if err := node.store.WriteBlock(block); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (node *Node) processFlashBlock(flashBlock *types.FlashBlock) error {
+	block := flashBlock.Block
+	eventCount := 0
+	for _, tx := range block.Transactions {
+		eventCount += len(tx.Events)
+	}
+
+	logrus.
+		WithField("block", blockRef{block.Header.Hash, block.Header.Height}).
+		WithField("parent_block", blockRef{valueOr(block.Header.PrevHash, ""), valueOr(block.Header.PrevNum, 0)}).
+		WithField("final_block", blockRef{block.Header.FinalHash, block.Header.FinalNum}).
+		WithField("index", flashBlock.Index).
+		WithField("stats", fmt.Sprintf("Txs: %d, Events: %d, Size: %s",
+			len(block.Transactions),
+			eventCount,
+			humanize.Bytes(uint64(block.ApproximatedSize())),
+		)).
+		Info("processing flash block")
 
 	if err := node.store.WriteBlock(block); err != nil {
 		return err

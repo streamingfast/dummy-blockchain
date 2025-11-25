@@ -52,6 +52,11 @@ type Block struct {
 	Transactions []Transaction `json:"transactions"`
 }
 
+type FlashBlock struct {
+	*Block
+	Index int32
+}
+
 type Signal struct {
 	BlockID         string
 	BlockNumber     uint64
