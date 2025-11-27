@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.7.4
+
+- Fixed `--with-flash-blocks` ordering (ex blocks: `2.full, 3.p1, 3.p2, 3.p3, 3.p4, 3.full`)
+
 ## 1.7.3
 
 - Added `--with-flash-blocks` flag to send flash blocks (4 per block)
