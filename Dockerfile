@@ -1,4 +1,4 @@
-ARG FIRECORE_VERSION=latest
+ARG FIRECORE_VERSION=f78888b # with support for partial/flash blocks
 
 FROM golang:1.24-bookworm AS build
 WORKDIR /app
