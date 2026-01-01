@@ -12,12 +12,12 @@ import (
 )
 
 type Node struct {
-	engine          Engine
-	server          Server
-	store           *Store
-	tracer          tracer.Tracer
-	withSignal      bool
-	withFlashBlocks bool
+	engine               Engine
+	server               Server
+	store                *Store
+	tracer               tracer.Tracer
+	withCommitmentSignal bool
+	withFlashBlocks      bool
 }
 
 func NewNode(
@@ -31,7 +31,7 @@ func NewNode(
 	stopHeight uint64,
 	serverAddr string,
 	tracer tracer.Tracer,
-	withSignal bool,
+	withCommitmentSignal bool,
 	withSkippedBlocks bool,
 	withReorgs bool,
 	withFlashBlocks bool,
@@ -39,17 +39,20 @@ func NewNode(
 	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
 
 	return &Node{
-		engine:          NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes, withSkippedBlocks, withReorgs),
-		store:           store,
-		server:          NewServer(store, serverAddr),
-		tracer:          tracer,
-		withSignal:      withSignal,
-		withFlashBlocks: withFlashBlocks,
+		engine:               NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes, withSkippedBlocks, withReorgs),
+		store:                store,
+		server:               NewServer(store, serverAddr),
+		tracer:               tracer,
+		withCommitmentSignal: withCommitmentSignal,
+		withFlashBlocks:      withFlashBlocks,
 	}
 }
 
 func (node *Node) Initialize() error {
-	logrus.Info("initializing node")
+	logrus.
+		WithField("with_commitment_signal", node.withCommitmentSignal).
+		WithField("with_flash_blocks", node.withFlashBlocks).
+		Info("initializing node")
 
 	logrus.Info("initializing store")
 	if err := node.store.Initialize(); err != nil {
@@ -92,12 +95,14 @@ func (node *Node) Initialize() error {
 		return err
 	}
 
-	version := "3.0"
-	if node.withFlashBlocks {
-		version = "3.1"
-	}
 	if tracer := node.tracer; tracer != nil {
-		logrus.Info("initializing tracer")
+		version := "3.0"
+		if node.withFlashBlocks {
+			version = "3.1"
+		}
+
+		logrus.WithField("firehose_protocol_version", version).Info("initializing tracer")
+
 		if err := node.tracer.Initialize(version); err != nil {
 			logrus.WithError(err).Error("tracer initialization failed")
 			return err
@@ -109,7 +114,7 @@ func (node *Node) Initialize() error {
 
 func (node *Node) Start(ctx context.Context) error {
 	go node.server.Start() // TODO: handle error here
-	go node.engine.StartBlockProduction(ctx, node.withSignal, node.withFlashBlocks)
+	go node.engine.StartBlockProduction(ctx, node.withCommitmentSignal, node.withFlashBlocks)
 
 	for {
 		select {
@@ -117,10 +122,13 @@ func (node *Node) Start(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
+
+			start := time.Now()
 			if err := node.processBlock(block); err != nil {
 				logrus.WithError(err).Error("failed to process block")
 				return err
 			}
+			logrus.WithField("duration", time.Since(start).String()).Debug("block processed")
 
 			if tracer := node.tracer; tracer != nil {
 				tracer.OnBlockStart(block.Header)

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"math/bits"
 	"time"
 )
 
@@ -20,6 +21,23 @@ func MakeHashNonce(data any, nonce *uint64) string {
 
 	shaSum := sha256.Sum256(content)
 	return fmt.Sprintf("%x", shaSum)
+}
+
+// MakeFakeHash creates a fake 32-byte hash using bit operations from block height and tx index.
+// This is for speed concerns, avoiding expensive SHA256 computation.
+func MakeFakeHash(blockHeight uint64, txIndex int) string {
+	var hash [32]byte
+
+	// Spread block height across first 16 bytes using bit operations
+	binary.BigEndian.PutUint64(hash[0:8], blockHeight)
+	binary.BigEndian.PutUint64(hash[8:16], blockHeight^0xAAAAAAAAAAAAAAAA)
+
+	// Spread tx index across next 16 bytes using bit operations
+	txIndexU64 := uint64(txIndex)
+	binary.BigEndian.PutUint64(hash[16:24], txIndexU64)
+	binary.BigEndian.PutUint64(hash[24:32], (txIndexU64<<32)|(blockHeight&0xFFFFFFFF))
+
+	return fmt.Sprintf("%x", hash)
 }
 
 func GenesisBlock(hash string, height uint64, genesisTime time.Time) *Block {
@@ -70,17 +88,17 @@ func (b *Block) ApproximatedSize() int {
 
 	// BlockHeader size approximation
 	if b.Header != nil {
-		size += 8 // Height (uint64)
+		size += protoSizeOfVarint(int(b.Header.Height)) // Height (uint64)
 		size += protoSizeOfString(b.Header.Hash)
 		if b.Header.PrevNum != nil {
-			size += 8 // PrevNum (uint64)
+			size += protoSizeOfVarint(int(*b.Header.PrevNum)) // PrevNum (uint64)
 		}
 		if b.Header.PrevHash != nil {
 			size += protoSizeOfString(*b.Header.PrevHash)
 		}
-		size += 8 // FinalNum (uint64)
+		size += protoSizeOfVarint(int(b.Header.FinalNum)) // FinalNum (uint64)
 		size += protoSizeOfString(b.Header.FinalHash)
-		size += 8 // Timestamp (int64 for protobuf)
+		size += protoSizeOfVarint(int(b.Header.Timestamp.UnixNano())) // Timestamp (int64 for protobuf)
 	}
 
 	// Transactions size approximation
@@ -89,6 +107,7 @@ func (b *Block) ApproximatedSize() int {
 		size += protoSizeOfString(tx.Hash)
 		size += protoSizeOfString(tx.Sender)
 		size += protoSizeOfString(tx.Receiver)
+		size += protoSizeOfBytes(tx.Data)
 		size += protoSizeOfBigInt(tx.Amount)
 		size += protoSizeOfBigInt(tx.Fee)
 		size += 1 // Success bool
@@ -127,6 +146,7 @@ type Transaction struct {
 	Hash     string   `json:"hash"`
 	Sender   string   `json:"sender"`
 	Receiver string   `json:"receiver"`
+	Data     []byte   `json:"data,omitempty"`
 	Amount   *big.Int `json:"amount"`
 	Fee      *big.Int `json:"fee"`
 	Success  bool     `json:"success"`
@@ -161,15 +181,26 @@ func protoSizeOfBytes(b []byte) int {
 	return len(b) + protoSizeOfVarint(len(b))
 }
 
+const (
+	_BYTE_COUNT_PER_WORD = _BIT_COUNT_PER_WORD / 8 // word size in bytes
+	_BIT_COUNT_PER_WORD  = bits.UintSize           // word size in bits
+)
+
 // protoSizeOfBigInt calculates the protobuf size of a big.Int as bytes
 func protoSizeOfBigInt(bi *big.Int) int {
 	if bi == nil {
 		return 0
 	}
-	return protoSizeOfBytes(bi.Bytes())
+
+	byteCount := bi.BitLen() * _BYTE_COUNT_PER_WORD
+	if byteCount == 0 {
+		return 0
+	}
+
+	return byteCount + protoSizeOfVarint(byteCount)
 }
 
-// protoSizeOfVarint calculates the size of a varint encoding
+// protoSizeOfVarint calculates the size of a varint encoding of an integer
 func protoSizeOfVarint(x int) int {
 	if x < 0 {
 		return 10 // negative numbers take 10 bytes

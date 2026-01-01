@@ -1,2 +1,2 @@
-generate.sh - Tue Apr 30 16:05:24 EDT 2024 - maoueh
-firehose-acme/proto revision: b03c6d4
+generate.sh - Wed Dec 31 00:12:06 EST 2025 - maoueh
+firehose-acme/proto revision: e31a02c

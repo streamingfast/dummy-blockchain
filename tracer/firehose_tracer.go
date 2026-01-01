@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	pbacme "github.com/streamingfast/dummy-blockchain/pb/sf/acme/type/v1"
 	"github.com/streamingfast/dummy-blockchain/types"
 	"google.golang.org/protobuf/proto"
@@ -49,6 +50,8 @@ func (t *FirehoseTracer) OnBlockEnd(blk *types.Block, finalBlockHeader *types.Bl
 	if err != nil {
 		panic(fmt.Errorf("unable to marshal block: %w", err))
 	}
+
+	logrus.WithField("proto_size", len(blockPayload)).Debug("marshalled block to proto")
 
 	t.printBlock(header, previousNum, previousHash, base64.StdEncoding.EncodeToString(blockPayload), 0)
 
@@ -155,6 +158,7 @@ func (t *FirehoseTracer) OnTrxStart(trx *types.Transaction) {
 		Hash:     trx.Hash,
 		Sender:   trx.Sender,
 		Receiver: trx.Receiver,
+		Data:     trx.Data,
 		Amount:   &pbacme.BigInt{Bytes: trx.Amount.Bytes()},
 		Fee:      &pbacme.BigInt{Bytes: trx.Fee.Bytes()},
 	}

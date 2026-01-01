@@ -76,16 +76,6 @@ func (store *Store) WriteBlock(block *types.Block) error {
 	store.meta.HeadHeight = block.Header.Height
 	store.meta.FinalHeight = block.Header.FinalNum
 
-	raw, err := store.encodeBlock(block)
-	if err != nil {
-		return err
-	}
-
-	meta, err := json.MarshalIndent(store.meta, "", "  ")
-	if err != nil {
-		return err
-	}
-
 	group := int(store.blockGroup(block.Header.Height))
 	if group != store.currentGroup {
 		groupDir := fmt.Sprintf("%s/%010d", store.blocksDir, group)
@@ -95,7 +85,19 @@ func (store *Store) WriteBlock(block *types.Block) error {
 		store.currentGroup = group
 	}
 
-	if err := os.WriteFile(store.blockFilename(block.Header.Height), raw, 0655); err != nil {
+	file, err := os.Create(store.blockFilename(block.Header.Height))
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(block); err != nil {
+		return fmt.Errorf("json encode block: %w", err)
+	}
+
+	meta, err := json.MarshalIndent(store.meta, "", "  ")
+	if err != nil {
 		return err
 	}
 
@@ -150,8 +152,4 @@ func (store *Store) readMeta() error {
 	}
 
 	return json.Unmarshal(data, &store.meta)
-}
-
-func (store *Store) encodeBlock(block *types.Block) ([]byte, error) {
-	return json.MarshalIndent(block, "", "  ")
 }

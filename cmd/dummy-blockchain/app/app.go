@@ -3,8 +3,12 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,18 +24,18 @@ const (
 )
 
 type Flags struct {
-	GenesisBlockBurst uint64
-	LogLevel          string
-	StoreDir          string
-	BlockRate         int
-	BlockSizeInBytes  int
-	ServerAddr        string
-	WithSignal        bool
-	WithSkippedBlocks bool
-	WithReorgs        bool
-	WithFlashBlocks   bool
-	Tracer            string
-	StopHeight        uint64
+	GenesisBlockBurst    uint64
+	LogLevel             string
+	StoreDir             string
+	BlockRate            int
+	BlockSize            string
+	ServerAddr           string
+	WithCommitmentSignal bool
+	WithSkippedBlocks    bool
+	WithReorgs           bool
+	WithFlashBlocks      bool
+	Tracer               string
+	StopHeight           uint64
 
 	Deprecated struct {
 		GenesisHeight  uint64
@@ -76,14 +80,14 @@ func initFlags(root *cobra.Command) error {
 	flags.StringVar(&cliOpts.LogLevel, "log-level", "info", "Logging level")
 	flags.StringVar(&cliOpts.StoreDir, "store-dir", "./data", "Directory for storing blockchain state")
 	flags.IntVar(&cliOpts.BlockRate, "block-rate", 60, "Block production rate (per minute)")
-	flags.IntVar(&cliOpts.BlockSizeInBytes, "block-size", 64000, "Approximate block size (in bytes) to produce")
+	flags.StringVar(&cliOpts.BlockSize, "block-size", "64 KiB", "Approximate block size (in bytes) to produce, accepts integere (with _) or human-readable sizes (e.g. 64KiB, 2 MiB)")
 	flags.Uint64Var(&cliOpts.StopHeight, "stop-height", 0, "Stop block production at this height")
 	flags.StringVar(&cliOpts.ServerAddr, "server-addr", "0.0.0.0:8080", "Server address")
 	flags.StringVar(&cliOpts.Tracer, "tracer", "", "The tracer to use, either <empty>, none or firehose")
-	flags.BoolVar(&cliOpts.WithSignal, "with-signal", false, "whether we produce BlockCommitmentLevel signals on top of blocks")
-	flags.BoolVar(&cliOpts.WithFlashBlocks, "with-flash-blocks", false, "whether we produce 4 flash blocks per block, skipping number 2 every 11 slots")
-	flags.BoolVar(&cliOpts.WithSkippedBlocks, "with-skipped-blocks", true, "whether skip a block number every 13 slots")
-	flags.BoolVar(&cliOpts.WithReorgs, "with-reorgs", true, "whether we produce reorgs every 17 slots")
+	flags.BoolVar(&cliOpts.WithCommitmentSignal, "with-signal", false, "Whether we produce BlockCommitmentLevel signals on top of blocks")
+	flags.BoolVar(&cliOpts.WithFlashBlocks, "with-flash-blocks", false, "Whether we produce 4 flash blocks per block, skipping number 2 every 11 slots")
+	flags.BoolVar(&cliOpts.WithSkippedBlocks, "with-skipped-blocks", true, "Whether we skip a block number every 13 slots")
+	flags.BoolVar(&cliOpts.WithReorgs, "with-reorgs", true, "Whether we produce reorgs every 17 slots")
 
 	return nil
 }
@@ -162,10 +166,20 @@ func makeStartComand() *cobra.Command {
 				blockTracer = &tracer.FirehoseTracer{}
 			}
 
+			blockSizeInBytes := 64 * 1024 // Default to 64 KiB
+			if cliOpts.BlockSize != "" {
+				parsedSize, err := parseByteSize(cliOpts.BlockSize)
+				if err != nil {
+					return err
+				}
+
+				blockSizeInBytes = int(parsedSize)
+			}
+
 			node := core.NewNode(
 				cliOpts.StoreDir,
 				cliOpts.BlockRate,
-				cliOpts.BlockSizeInBytes,
+				blockSizeInBytes,
 				GenesisHash,
 				GenesisHeight,
 				genesisTime,
@@ -173,7 +187,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.StopHeight,
 				cliOpts.ServerAddr,
 				blockTracer,
-				cliOpts.WithSignal,
+				cliOpts.WithCommitmentSignal,
 				cliOpts.WithSkippedBlocks,
 				cliOpts.WithReorgs,
 				cliOpts.WithFlashBlocks,
@@ -219,4 +233,47 @@ func waitForSignal() os.Signal {
 	signal.Notify(sig, syscall.SIGTERM)
 	signal.Notify(sig, syscall.SIGINT)
 	return <-sig
+}
+
+var integerRegex = regexp.MustCompile(`^[0-9_]+$`)
+var humanReadableRegex = regexp.MustCompile(`(?i)^([0-9_]+)\s*(kib|mib|gib|tib|kb|mb|gb|tb)$`)
+var unitToMultiplier = map[string]uint64{
+	"kb":  1000,
+	"mb":  1000 * 1000,
+	"gb":  1000 * 1000 * 1000,
+	"tb":  1000 * 1000 * 1000 * 1000,
+	"kib": 1024,
+	"mib": 1024 * 1024,
+	"gib": 1024 * 1024 * 1024,
+	"tib": 1024 * 1024 * 1024 * 1024,
+}
+
+func parseByteSize(sizeStr string) (uint64, error) {
+	if integerRegex.MatchString(sizeStr) {
+		size, err := strconv.ParseUint(sizeStr, 0, 64)
+		if err != nil {
+			return 0, err
+		}
+		return size, nil
+	}
+
+	matches := humanReadableRegex.FindStringSubmatch(sizeStr)
+	if len(matches) != 3 {
+		return 0, fmt.Errorf("invalid byte size format %q", sizeStr)
+	}
+
+	numberPart := matches[1]
+	unitPart := strings.ToLower(matches[2])
+
+	number, err := strconv.ParseUint(numberPart, 0, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid number in byte size: %w", err)
+	}
+
+	multiplier, found := unitToMultiplier[unitPart]
+	if !found {
+		return 0, fmt.Errorf("unknown unit in byte size: %q", unitPart)
+	}
+
+	return number * multiplier, nil
 }

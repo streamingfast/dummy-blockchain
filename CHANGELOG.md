@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 1.7.5
+
+- Add a `data` field in transaction to more easily create representative transactions.
+
+- Fixed stop block not properly working in all cases.
+
+- Improved representativity of created blocks against a real chain.
+
+- Greatly improved speed at which big block (> 1MiB) are created.
+
+- Flag `--block-size` now accepts human bytes representation (e.g. `4KiB`, `32mb`, `10 MiB`) and underscores to separate integers.
+
+- Put back `firehose-core@latest` as Docker image to pick now that flash blocks is merged.
+
+- Add a bit of variability in generated transaction content (for more real-world alignment).
+
 ## 1.7.4
 
 - Fixed `--with-flash-blocks` ordering (ex blocks: `2.full, 3.p1, 3.p2, 3.p3, 3.p4, 3.full`)
