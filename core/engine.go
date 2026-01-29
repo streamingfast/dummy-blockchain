@@ -314,6 +314,11 @@ func (e *Engine) addTransactions(block *types.Block, sizeInBytes int) {
 	txCount := targetTxCount(sizeInBytes)
 	dataSizePerTx := (sizeInBytes / txCount) - 250 // rough estimate of tx overhead
 
+	// Ensure dataSizePerTx is non-negative to avoid makeslice panic
+	if dataSizePerTx < 0 {
+		dataSizePerTx = 0
+	}
+
 	for range txCount {
 		addTx(make([]byte, dataSizePerTx))
 	}
