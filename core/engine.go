@@ -145,8 +145,8 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 					return
 				}
 
-				if i == 0 && block.Header.Height%11 != 0 { // on normal blocks, we send the 'finalFlashBlock' with index 4. 1004 means "final + 4"
-					// at every multiple of 11, we will not send the final flash block.
+				if i == 0 && (block.Header.Height%11 != 0 || !e.withReorgs) { // on normal blocks, we send the 'finalFlashBlock' with index 4. 1004 means "final + 4"
+					// if we have reorgs, at every multiple of 11, we will not send the final flash block.
 					// at every multiple of 17, we will send the 'final flash block, normally. it will get replaced later with undo if we have withReorgs
 					fb := &types.FlashBlock{
 						Block: e.newBlock(block.Header.Height, nil, prevBlock),
