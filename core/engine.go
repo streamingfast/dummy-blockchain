@@ -117,7 +117,7 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 
 	blockTicker := time.NewTicker(e.blockRate)
 	commitmentSignalTicker := time.NewTicker(e.blockRate)
-	flashBlockTicker := time.NewTicker(e.blockRate / 5) // we use 4 slots out of 5
+	flashBlockTicker := time.NewTicker(e.blockRate / 4) // we use 3 slots out of 4
 
 	if withCommitmentSignal {
 		<-time.After(e.blockRate / 2) // offset by half duration
@@ -138,10 +138,25 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 
 		select {
 		case <-blockTicker.C:
-			for _, block := range e.createBlocks() {
+			prevBlock := e.prevBlock // keep this handy for flashblock
+			for i, block := range e.createBlocks() {
 				if e.hasReachedStopHeight(block.Header.Height) {
 					e.stop("reached stop block height", blockTicker, commitmentSignalTicker, flashBlockTicker)
 					return
+				}
+
+				if i == 0 && block.Header.Height%11 != 0 { // on normal blocks, we send the 'finalFlashBlock' with index 4. 1004 means "final + 4"
+					// at every multiple of 11, we will not send the final flash block.
+					// at every multiple of 17, we will send the 'final flash block, normally. it will get replaced later with undo if we have withReorgs
+					fb := &types.FlashBlock{
+						Block: e.newBlock(block.Header.Height, nil, prevBlock),
+						Index: 1004, // "final" flash block
+					}
+					fb.Block.Header.FinalHash = prevBlock.Header.FinalHash // this may have changed on 'e.newBlock'
+					fb.Block.Header.FinalNum = prevBlock.Header.FinalNum   // this may have changed on 'e.newBlock'
+					fb.Block.Header.Hash = block.Header.Hash               // if we're on an block that will get reorg'd, we still send the partialblock of THAT HASH
+					e.addTransactions(fb.Block, e.blockSizeInBytes)
+					e.flashBlockChan <- fb
 				}
 
 				e.blockChan <- block
@@ -178,6 +193,10 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 			if num != lastFlashBlockNum {
 				lastFlashBlockIndex = 0
 				lastFlashBlockNum = num
+				continue
+			}
+
+			if lastFlashBlockIndex >= 3 { // we don't send 4 or above, it's now sent as final block
 				continue
 			}
 

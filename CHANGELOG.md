@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+* Send 'lastFinal' signal at every block by doing 'idx+1000' -- except multiples of 11
+
 ## 1.7.5
 
 - Add a `data` field in transaction to more easily create representative transactions.
