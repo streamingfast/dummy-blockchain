@@ -1,8 +1,10 @@
 # CHANGELOG
 
-## Unreleased
+## 1.7.6
 
 * Send 'lastFinal' signal at every block by doing 'idx+1000' -- except multiples of 11
+* Fix partial blocks sometimes having the same ID as a 'wrong full block' when running with-reorgs
+* Fix 'burst' handling with reorgs: now behaves as expected (300 blocks + reorgs will bring you to block 300, no reorgs sent during burst)
 
 ## 1.7.5
 
