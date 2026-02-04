@@ -97,7 +97,7 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 
 		startBurst := time.Now()
 		for i := 0; i < int(e.genesisBlockBurst); {
-			for _, block := range e.createBlocks() {
+			for _, block := range e.createBlocks(true) {
 				if e.hasReachedStopHeight(block.Header.Height) {
 					e.stop("reached stop block height during genesis burst")
 					return
@@ -139,7 +139,7 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 		select {
 		case <-blockTicker.C:
 			prevBlock := e.prevBlock // keep this handy for flashblock
-			for i, block := range e.createBlocks() {
+			for i, block := range e.createBlocks(false) {
 				if e.hasReachedStopHeight(block.Header.Height) {
 					e.stop("reached stop block height", blockTicker, commitmentSignalTicker, flashBlockTicker)
 					return
@@ -201,7 +201,8 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 			}
 
 			idx := lastFlashBlockIndex + 1
-			flashBlock := e.newBlock(num, &idx, e.prevBlock)
+			nonce := idx + 10000 // so we don't overlap with forks' hashes
+			flashBlock := e.newBlock(num, &nonce, e.prevBlock)
 			e.addTransactions(flashBlock, int(idx*uint64(e.blockSizeInBytes)/4))
 			e.flashBlockChan <- &types.FlashBlock{
 				Block: flashBlock,
@@ -238,14 +239,14 @@ func (e *Engine) SubscribeFlashBlocks() <-chan *types.FlashBlock {
 	return e.flashBlockChan
 }
 
-func (e *Engine) createBlocks() (out []*types.Block) {
+func (e *Engine) createBlocks(inGenesis bool) (out []*types.Block) {
 	heightToProduce := e.prevBlock.Header.Height + 1
-	if e.withSkippedBlocks && heightToProduce%13 == 0 {
+	if !inGenesis && e.withSkippedBlocks && heightToProduce%13 == 0 {
 		heightToProduce += 1
 		logrus.Info(fmt.Sprintf("skipping block #%d that is a multiple of 13, created %d instead", heightToProduce-1, heightToProduce))
 	}
 
-	if e.withReorgs && heightToProduce%17 == 0 {
+	if !inGenesis && e.withReorgs && heightToProduce%17 == 0 {
 		if heightToProduce%2 == 0 {
 			logrus.Info("created 2 block fork sequence")
 			firstFork := e.newBlock(heightToProduce, ptr(uint64(1)), e.prevBlock)
