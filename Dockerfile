@@ -1,4 +1,4 @@
-ARG FIRECORE_VERSION=b34cd67
+ARG FIRECORE_VERSION=c34b14f
 
 FROM golang:1.24-bookworm AS build
 WORKDIR /app
