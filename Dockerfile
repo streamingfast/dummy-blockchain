@@ -1,6 +1,6 @@
-ARG FIRECORE_VERSION=b34cd67
+ARG FIRECORE_VERSION=latest
 
-FROM golang:1.24-bookworm AS build
+FROM golang:1.26-bookworm AS build
 WORKDIR /app
 
 # Copy go mod files first for better caching
