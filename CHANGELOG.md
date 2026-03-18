@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.7.7
+
+* Updating to latest `firehose-core` version.
+
 ## 1.7.6
 
 * Send 'lastFinal' signal at every block by doing 'idx+1000' -- except multiples of 11
