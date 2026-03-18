@@ -70,7 +70,7 @@ func (t *FirehoseTracer) printBlock(header *pbacme.BlockHeader, prevNum uint64, 
 			prevNum,
 			prevHash,
 			header.FinalNum,
-			now, //override timestamp so we can see the real time of block propagation through substreams stack
+			now.UnixNano(), //override timestamp so we can see the real time of block propagation through substreams stack
 			blockPayload,
 		)
 	} else {
@@ -80,7 +80,7 @@ func (t *FirehoseTracer) printBlock(header *pbacme.BlockHeader, prevNum uint64, 
 			prevNum,
 			prevHash,
 			header.FinalNum,
-			now, //override timestamp so we can see the real time of block propagation through substreams stack
+			now.UnixNano(), //override timestamp so we can see the real time of block propagation through substreams stack
 			blockPayload,
 		)
 	}
