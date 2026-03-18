@@ -35,8 +35,9 @@ func NewNode(
 	withSkippedBlocks bool,
 	withReorgs bool,
 	withFlashBlocks bool,
+	purge bool,
 ) *Node {
-	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime)
+	store := NewStore(storeDir, genesisHash, genesisHeight, genesisTime, purge)
 
 	return &Node{
 		engine:               NewEngine(genesisHash, genesisHeight, genesisTime, genesisBlockBurst, stopHeight, blockRate, blockSizeInBytes, withSkippedBlocks, withReorgs),
