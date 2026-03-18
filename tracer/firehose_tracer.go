@@ -3,6 +3,7 @@ package tracer
 import (
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	pbacme "github.com/streamingfast/dummy-blockchain/pb/sf/acme/type/v1"
@@ -60,6 +61,7 @@ func (t *FirehoseTracer) OnBlockEnd(blk *types.Block, finalBlockHeader *types.Bl
 }
 
 func (t *FirehoseTracer) printBlock(header *pbacme.BlockHeader, prevNum uint64, prevHash string, blockPayload string, flashBlockIndex int32) {
+	now := time.Now()
 	if t.withFlashBlocks {
 		fmt.Printf("FIRE BLOCK %d %d %s %d %s %d %d %s\n",
 			header.Height,
@@ -68,7 +70,7 @@ func (t *FirehoseTracer) printBlock(header *pbacme.BlockHeader, prevNum uint64, 
 			prevNum,
 			prevHash,
 			header.FinalNum,
-			header.Timestamp,
+			now, //override timestamp so we can see the real time of block propagation through substreams stack
 			blockPayload,
 		)
 	} else {
@@ -78,7 +80,7 @@ func (t *FirehoseTracer) printBlock(header *pbacme.BlockHeader, prevNum uint64, 
 			prevNum,
 			prevHash,
 			header.FinalNum,
-			header.Timestamp,
+			now, //override timestamp so we can see the real time of block propagation through substreams stack
 			blockPayload,
 		)
 	}
