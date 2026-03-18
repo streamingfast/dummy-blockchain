@@ -89,7 +89,7 @@ func initFlags(root *cobra.Command) error {
 	flags.BoolVar(&cliOpts.WithFlashBlocks, "with-flash-blocks", false, "Whether we produce 4 flash blocks per block, skipping number 2 every 11 slots")
 	flags.BoolVar(&cliOpts.WithSkippedBlocks, "with-skipped-blocks", true, "Whether we skip a block number every 13 slots")
 	flags.BoolVar(&cliOpts.WithReorgs, "with-reorgs", true, "Whether we produce reorgs every 17 slots")
-	flags.BoolVar(&cliOpts.Purge, "purge", false, "Purge block groups not containing genesis, final, or head heights")
+	flags.BoolVar(&cliOpts.Purge, "purge", true, "Purge block groups not containing genesis, final, or head heights")
 
 	return nil
 }
