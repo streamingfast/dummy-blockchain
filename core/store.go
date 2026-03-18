@@ -28,16 +28,18 @@ type Store struct {
 	blocksDir    string
 	metaPath     string
 	currentGroup int
+	purge        bool
 
 	meta StoreMeta
 }
 
-func NewStore(rootDir string, genesisHash string, genesisHeight uint64, genesisTime time.Time) *Store {
+func NewStore(rootDir string, genesisHash string, genesisHeight uint64, genesisTime time.Time, purge bool) *Store {
 	return &Store{
 		rootDir:      rootDir,
 		blocksDir:    filepath.Join(rootDir, "blocks"),
 		metaPath:     filepath.Join(rootDir, "meta.json"),
 		currentGroup: -1,
+		purge:        purge,
 
 		meta: StoreMeta{
 			GenesisHash:      genesisHash,
@@ -101,7 +103,17 @@ func (store *Store) WriteBlock(block *types.Block) error {
 		return err
 	}
 
-	return os.WriteFile(store.metaPath, meta, 0655)
+	if err := os.WriteFile(store.metaPath, meta, 0655); err != nil {
+		return err
+	}
+
+	if store.purge {
+		if err := store.purgeOldGroups(); err != nil {
+			logrus.WithError(err).Warn("failed to purge old block groups")
+		}
+	}
+
+	return nil
 }
 
 func (store *Store) CurrentBlock() (*types.Block, error) {
@@ -129,6 +141,42 @@ func (store *Store) blockFilename(height uint64) string {
 
 func (store *Store) blockGroup(height uint64) uint64 {
 	return height - (height % filesPerDir)
+}
+
+func (store *Store) purgeOldGroups() error {
+	keepGroups := map[uint64]bool{
+		store.blockGroup(store.meta.GenesisHeight): true,
+		store.blockGroup(store.meta.FinalHeight):   true,
+		store.blockGroup(store.meta.HeadHeight):    true,
+	}
+
+	entries, err := os.ReadDir(store.blocksDir)
+	if err != nil {
+		return fmt.Errorf("read blocks dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		var group uint64
+		if _, err := fmt.Sscanf(entry.Name(), "%d", &group); err != nil {
+			continue
+		}
+
+		if keepGroups[group] {
+			continue
+		}
+
+		groupDir := filepath.Join(store.blocksDir, entry.Name())
+		logrus.WithField("dir", groupDir).Debug("purging old block group")
+		if err := os.RemoveAll(groupDir); err != nil {
+			return fmt.Errorf("remove group dir %s: %w", groupDir, err)
+		}
+	}
+
+	return nil
 }
 
 func (store *Store) readMeta() error {

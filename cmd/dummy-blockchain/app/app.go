@@ -34,6 +34,7 @@ type Flags struct {
 	WithSkippedBlocks    bool
 	WithReorgs           bool
 	WithFlashBlocks      bool
+	Purge                bool
 	Tracer               string
 	StopHeight           uint64
 
@@ -88,6 +89,7 @@ func initFlags(root *cobra.Command) error {
 	flags.BoolVar(&cliOpts.WithFlashBlocks, "with-flash-blocks", false, "Whether we produce 4 flash blocks per block, skipping number 2 every 11 slots")
 	flags.BoolVar(&cliOpts.WithSkippedBlocks, "with-skipped-blocks", true, "Whether we skip a block number every 13 slots")
 	flags.BoolVar(&cliOpts.WithReorgs, "with-reorgs", true, "Whether we produce reorgs every 17 slots")
+	flags.BoolVar(&cliOpts.Purge, "purge", false, "Purge block groups not containing genesis, final, or head heights")
 
 	return nil
 }
@@ -119,7 +121,7 @@ func makeInitCommand() *cobra.Command {
 				WithField("dir", cliOpts.StoreDir).
 				Info("initializing chain store")
 
-			store := core.NewStore(cliOpts.StoreDir, GenesisHash, GenesisHeight, genesisTime)
+			store := core.NewStore(cliOpts.StoreDir, GenesisHash, GenesisHeight, genesisTime, false)
 			return store.Initialize()
 		},
 	}
@@ -191,6 +193,7 @@ func makeStartComand() *cobra.Command {
 				cliOpts.WithSkippedBlocks,
 				cliOpts.WithReorgs,
 				cliOpts.WithFlashBlocks,
+				cliOpts.Purge,
 			)
 
 			if err := node.Initialize(); err != nil {
