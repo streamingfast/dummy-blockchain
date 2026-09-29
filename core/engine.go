@@ -112,12 +112,13 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 
 	var lastBlock *types.Block
 	var lastSignal *types.Signal
-	var lastFlashBlockNum uint64
-	var lastFlashBlockIndex uint64
 
-	blockTicker := time.NewTicker(e.blockRate)
+	// slotTicker fires 4 times per blockRate. Slot 0 creates the block; slots 1-3 emit
+	// flash partials 1-3 for the upcoming block. Driving both from a single ticker with
+	// an explicit slot counter keeps ordering deterministic, unlike two independent
+	// tickers that can fire at the same instant and race through `select`.
+	slotTicker := time.NewTicker(e.blockRate / 4)
 	commitmentSignalTicker := time.NewTicker(e.blockRate)
-	flashBlockTicker := time.NewTicker(e.blockRate / 4) // we use 3 slots out of 4
 
 	if withCommitmentSignal {
 		<-time.After(e.blockRate / 2) // offset by half duration
@@ -126,9 +127,7 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 		commitmentSignalTicker.Stop()
 	}
 
-	if !withFlashBlocks {
-		flashBlockTicker.Stop()
-	}
+	slot := 0
 
 	for {
 		if e.tearedDown {
@@ -137,31 +136,46 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 		}
 
 		select {
-		case <-blockTicker.C:
-			prevBlock := e.prevBlock // keep this handy for flashblock
-			for i, block := range e.createBlocks(false) {
-				if e.hasReachedStopHeight(block.Header.Height) {
-					e.stop("reached stop block height", blockTicker, commitmentSignalTicker, flashBlockTicker)
-					return
-				}
+		case <-slotTicker.C:
+			slot = (slot + 1) % 4
 
-				if withFlashBlocks && i == 0 && (block.Header.Height%11 != 0 || !e.withReorgs) { // on normal blocks, we send the 'finalFlashBlock' with index 4. 1004 means "final + 4"
-					// if we have reorgs, at every multiple of 11, we will not send the final flash block.
-					// at every multiple of 17, we will send the 'final flash block, normally. it will get replaced later with undo if we have withReorgs
-					fb := &types.FlashBlock{
-						Block: e.newBlock(block.Header.Height, nil, prevBlock),
-						Index: 1004, // "final" flash block
+			if slot == 0 {
+				prevBlock := e.prevBlock // keep this handy for flashblock
+				for i, block := range e.createBlocks(false) {
+					if e.hasReachedStopHeight(block.Header.Height) {
+						e.stop("reached stop block height", slotTicker, commitmentSignalTicker)
+						return
 					}
-					fb.Block.Header.FinalHash = prevBlock.Header.FinalHash // this may have changed on 'e.newBlock'
-					fb.Block.Header.FinalNum = prevBlock.Header.FinalNum   // this may have changed on 'e.newBlock'
-					fb.Block.Header.Hash = block.Header.Hash               // if we're on an block that will get reorg'd, we still send the partialblock of THAT HASH
-					e.addTransactions(fb.Block, e.blockSizeInBytes)
-					e.flashBlockChan <- fb
-				}
 
-				e.blockChan <- block
-				lastBlock = block
+					if withFlashBlocks && i == 0 && (block.Header.Height%11 != 0 || !e.withReorgs) { // on normal blocks, we send the 'finalFlashBlock' with index 4. 1004 means "final + 4"
+						// if we have reorgs, at every multiple of 11, we will not send the final flash block.
+						// at every multiple of 17, we will send the 'final flash block, normally. it will get replaced later with undo if we have withReorgs
+						fb := &types.FlashBlock{
+							Block: e.newBlock(block.Header.Height, nil, prevBlock),
+							Index: 1004, // "final" flash block
+						}
+						fb.Block.Header.FinalHash = prevBlock.Header.FinalHash // this may have changed on 'e.newBlock'
+						fb.Block.Header.FinalNum = prevBlock.Header.FinalNum   // this may have changed on 'e.newBlock'
+						fb.Block.Header.Hash = block.Header.Hash               // if we're on an block that will get reorg'd, we still send the partialblock of THAT HASH
+						e.addTransactions(fb.Block, e.blockSizeInBytes)
+						e.flashBlockChan <- fb
+					}
+
+					e.blockChan <- block
+					lastBlock = block
+				}
+			} else if withFlashBlocks && lastBlock != nil {
+				idx := uint64(slot)
+				num := lastBlock.Header.Height + 1
+				nonce := idx + 10000 // so we don't overlap with forks' hashes
+				flashBlock := e.newBlock(num, &nonce, e.prevBlock)
+				e.addTransactions(flashBlock, int(idx*uint64(e.blockSizeInBytes)/4))
+				e.flashBlockChan <- &types.FlashBlock{
+					Block: flashBlock,
+					Index: int32(idx),
+				}
 			}
+
 		case <-commitmentSignalTicker.C:
 			if !withCommitmentSignal {
 				// Just ignore if a signal ticker comes in, but it actually should not be called because of the Stop(), unless there is a crazy race condition
@@ -180,40 +194,8 @@ func (e *Engine) StartBlockProduction(ctx context.Context, withCommitmentSignal,
 				lastSignal = sig
 			}
 
-		case <-flashBlockTicker.C:
-			if !withFlashBlocks {
-				// Just ignore if a flashblock ticker comes in, but it actually should not be called because of the Stop(), unless there is a crazy race condition
-				continue
-			}
-			if lastBlock == nil {
-				continue
-			}
-
-			num := lastBlock.Header.Height + 1
-			if num != lastFlashBlockNum {
-				lastFlashBlockIndex = 0
-				lastFlashBlockNum = num
-				continue
-			}
-
-			if lastFlashBlockIndex >= 3 { // we don't send 4 or above, it's now sent as final block
-				continue
-			}
-
-			idx := lastFlashBlockIndex + 1
-			nonce := idx + 10000 // so we don't overlap with forks' hashes
-			flashBlock := e.newBlock(num, &nonce, e.prevBlock)
-			e.addTransactions(flashBlock, int(idx*uint64(e.blockSizeInBytes)/4))
-			e.flashBlockChan <- &types.FlashBlock{
-				Block: flashBlock,
-				Index: int32(idx),
-			}
-
-			lastFlashBlockIndex = idx
-			lastFlashBlockNum = num
-
 		case <-ctx.Done():
-			e.stop("context done", blockTicker, commitmentSignalTicker, flashBlockTicker)
+			e.stop("context done", slotTicker, commitmentSignalTicker)
 			return
 		}
 	}

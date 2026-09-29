@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.7.8
+
+### Fixed
+
+* Fix flash blocks sometimes missing a partial (1, 2 or 3) because the block and flash tickers could fire at the same instant and race through `select`; block production now drives both from a single ticker with a deterministic slot counter.
+* Track `firehose-core` `latest` in the Docker image, picking up hub/forkable fixes for partial blocks around forks.
+
 ## 1.7.7
 
 * Updating to latest `firehose-core` version.
