@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+### Changed
+
+* Bump Go to 1.27 (go.mod and Dockerfile), CI now derives its Go version from `go.mod` instead of a hardcoded matrix value.
+* Bump GitHub Actions (`checkout`, `setup-go`, `cache`, `setup-buildx-action`, `login-action`, `metadata-action`, `build-push-action`) to their latest majors to drop the Node.js 20 runtime deprecation warning.
+
 ## 1.7.8
 
 ### Fixed
