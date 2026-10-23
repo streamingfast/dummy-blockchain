@@ -69,13 +69,12 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # Needs the next sfreleaser release as latest (--non-interactive).
+      # Builds sfreleaser from master until a release includes --non-interactive.
       - name: Install sfreleaser
         if: steps.version.outputs.version != ''
         run: |
-          mkdir -p "$RUNNER_TEMP/sfreleaser"
-          curl -fsSL "https://github.com/streamingfast/sfreleaser/releases/latest/download/sfreleaser_linux_x86_64.tar.gz" | tar -xz -C "$RUNNER_TEMP/sfreleaser"
-          echo "$RUNNER_TEMP/sfreleaser" >> "$GITHUB_PATH"
+          go install github.com/streamingfast/sfreleaser/cmd/sfreleaser@master
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       # sfreleaser forwards only GITHUB_TOKEN to goreleaser, which uses it for both
       # the draft release and the homebrew-tap pull request.
