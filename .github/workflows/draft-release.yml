@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: draft-release
@@ -76,14 +76,13 @@ jobs:
           go install github.com/streamingfast/sfreleaser/cmd/sfreleaser@master
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      # sfreleaser forwards only GITHUB_TOKEN to goreleaser, which uses it for both
-      # the draft release and the homebrew-tap pull request.
       - name: Create draft release
         if: steps.version.outputs.version != ''
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           sfreleaser release "$VERSION" --non-interactive --brew-pull-request
 
