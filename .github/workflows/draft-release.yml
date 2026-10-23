@@ -1,0 +1,90 @@
+name: Draft release
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "CHANGELOG.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draft-release
+  cancel-in-progress: false
+
+env:
+  CHANGELOG_PATH: "CHANGELOG.md"
+  SFRELEASER_DISABLE_PTY: "true"
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect version
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          detect() {
+            grep -E '^##[^#]' | tr '[:upper:]' '[:lower:]' | grep -m1 -oE 'v?[0-9]+\.[0-9]+\.[0-9]+[a-z0-9._-]*' | head -n1 || true
+          }
+
+          version=$(detect < "$CHANGELOG_PATH")
+          if [[ -z "$version" ]]; then
+            echo "No versioned section in $CHANGELOG_PATH, nothing to release"
+            exit 0
+          fi
+          version="v${version#v}"
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            previous=$( (git show "$BEFORE:$CHANGELOG_PATH" 2>/dev/null || true) | detect)
+            if [[ -n "$previous" && "v${previous#v}" == "$version" ]]; then
+              echo "Version heading $version was already there before this push, nothing to release"
+              exit 0
+            fi
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            echo "Tag $version already exists, nothing to release"
+            exit 0
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        if: steps.version.outputs.version != '' && hashFiles('go.mod') != ''
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      # Builds sfreleaser from master until a release includes --non-interactive.
+      - name: Install sfreleaser
+        if: steps.version.outputs.version != ''
+        run: |
+          go install github.com/streamingfast/sfreleaser/cmd/sfreleaser@master
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # sfreleaser forwards only GITHUB_TOKEN to goreleaser, which uses it for both
+      # the draft release and the homebrew-tap pull request.
+      - name: Create draft release
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          sfreleaser release "$VERSION" --non-interactive --brew-pull-request
+
+
