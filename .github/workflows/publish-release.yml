@@ -107,5 +107,5 @@ jobs:
             sleep 10
           done
           gh pr checks "$url" --watch --fail-fast
-          gh pr merge "$url" --squash --match-head-commit "$head_sha"
+          gh pr merge "$url" --squash --admin --match-head-commit "$head_sha"
           echo "Merged $url" >> "$GITHUB_STEP_SUMMARY"
