@@ -82,8 +82,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          sfreleaser release "$VERSION" --non-interactive --brew-pull-request
+          sfreleaser release "$VERSION" --non-interactive --brew-disabled
 
 
