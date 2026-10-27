@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.7.10
+
+### Changed
+
+* Releases are drafted by CI when a pull request adds a version heading to this file, and publishing the draft updates the Homebrew formula on its own. Pull requests adding a version heading get a comment with the release notes and the commits going out.
+
 ## 1.7.9
 
 ### Changed
