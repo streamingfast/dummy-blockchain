@@ -1,7 +1,7 @@
 name: Draft release
 
 on:
-  push:
+  pull_request:
     branches:
       - "main"
     paths:
@@ -10,79 +10,45 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
-  group: draft-release
-  cancel-in-progress: false
-
-env:
-  CHANGELOG_PATH: "CHANGELOG.md"
-  SFRELEASER_DISABLE_PTY: "true"
+  group: draft-release-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   draft-release:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
-      - name: Detect version
-        id: version
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
-        run: |
-          detect() {
-            grep -E '^##[^#]' | tr '[:upper:]' '[:lower:]' | grep -m1 -oE 'v?[0-9]+\.[0-9]+\.[0-9]+[a-z0-9._-]*' | head -n1 || true
-          }
-
-          version=$(detect < "$CHANGELOG_PATH")
-          if [[ -z "$version" ]]; then
-            echo "No versioned section in $CHANGELOG_PATH, nothing to release"
-            exit 0
-          fi
-          version="v${version#v}"
-
-          if [[ "$EVENT_NAME" == "push" ]]; then
-            previous=$( (git show "$BEFORE:$CHANGELOG_PATH" 2>/dev/null || true) | detect)
-            if [[ -n "$previous" && "v${previous#v}" == "$version" ]]; then
-              echo "Version heading $version was already there before this push, nothing to release"
-              exit 0
-            fi
-          fi
-
-          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
-            echo "Tag $version already exists, nothing to release"
-            exit 0
-          fi
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Detect release PR
+        id: detect
+        uses: streamingfast/actions/sfreleaser/detect@v1
 
       - name: Set up Go
-        if: steps.version.outputs.version != '' && hashFiles('go.mod') != ''
+        if: steps.detect.outputs.is_release_pr
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
-      # Builds sfreleaser from master until a release includes --non-interactive.
-      - name: Install sfreleaser
-        if: steps.version.outputs.version != ''
-        run: |
-          go install github.com/streamingfast/sfreleaser/cmd/sfreleaser@master
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Cache zig
+        if: steps.detect.outputs.is_release_pr
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/sfreleaser
+            ~/.cache/zig
+          key: ${{ runner.os }}-zig-${{ github.base_ref }}
 
-      - name: Create draft release
-        if: steps.version.outputs.version != ''
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          sfreleaser release "$VERSION" --non-interactive --brew-disabled
-
-
+      - name: Prepare release
+        if: steps.detect.outputs.is_release_pr
+        uses: streamingfast/actions/sfreleaser/prepare@v1
+        with:
+          version: ${{ steps.detect.outputs.version }}
+          homebrew-tap-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
